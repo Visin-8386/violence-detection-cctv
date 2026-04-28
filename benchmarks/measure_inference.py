@@ -26,20 +26,67 @@ def parse_args():
 
 
 def load_model_from_keras_archive(path):
-    # Import local app to ensure custom layers are registered (if present)
-    try:
-        import app as app_module
-        # If app has already loaded model, reuse it
-        if hasattr(app_module, 'model') and app_module.model is not None:
-            return app_module.model
-    except Exception:
-        pass
+    # Recreate the same architecture as in app.py (to avoid import issues)
+    from tensorflow.keras.layers import Layer, Input, GlobalAveragePooling2D, Bidirectional, LSTM, Dense, Dropout
+    from tensorflow.keras.models import Model
+    from tensorflow.keras.applications import MobileNetV2
+    import tensorflow.keras.backend as K
 
-    # Fallback: load model architecture from app.build_model_architecture if available
+    class TemporalAttention(Layer):
+        def __init__(self, **kwargs):
+            super(TemporalAttention, self).__init__(**kwargs)
+
+        def build(self, input_shape):
+            self.W = self.add_weight(name='att_weight', shape=(input_shape[-1], 1),
+                                      initializer='glorot_uniform', trainable=True)
+            self.b = self.add_weight(name='att_bias', shape=(1,),
+                                      initializer='zeros', trainable=True)
+            super(TemporalAttention, self).build(input_shape)
+
+        def call(self, x):
+            e = K.tanh(tf.tensordot(x, self.W, axes=1) + self.b)
+            alpha = K.softmax(K.squeeze(e, axis=-1))
+            context = x * K.expand_dims(alpha, axis=-1)
+            return K.sum(context, axis=1), alpha
+
+        def get_config(self):
+            return super().get_config()
+
+    class ReshapeToFrames(Layer):
+        def call(self, x):
+            batch_size = tf.shape(x)[0]
+            return tf.reshape(x, (batch_size * 15, 128, 128, 3))
+
+        def get_config(self):
+            return super().get_config()
+
+    class ReshapeToSequence(Layer):
+        def call(self, x):
+            features = x.shape[-1]
+            batch_size = tf.shape(x)[0] // 15
+            return tf.reshape(x, (batch_size, 15, features))
+
+        def get_config(self):
+            return super().get_config()
+
+    def build_model_architecture_local():
+        base_model = MobileNetV2(weights=None, include_top=False, input_shape=(128, 128, 3))
+
+        video_input = Input(shape=(15, 128, 128, 3))
+        x = ReshapeToFrames()(video_input)
+        x = base_model(x)
+        x = GlobalAveragePooling2D()(x)
+        x = ReshapeToSequence()(x)
+        x = Bidirectional(LSTM(64, return_sequences=True))(x)
+        context_vector, _ = TemporalAttention(name='attention_layer')(x)
+        x = Dense(64, activation='relu')(context_vector)
+        x = Dropout(0.5)(x)
+        output = Dense(2, activation='softmax')(x)
+        return Model(inputs=video_input, outputs=output)
+
+    # Build model and load weights from .keras archive
     try:
-        from app import build_model_architecture, MODEL_PATH
-        model = build_model_architecture()
-        # .keras is a zip that contains model.weights.h5
+        model = build_model_architecture_local()
         import zipfile, tempfile
         with zipfile.ZipFile(path, 'r') as zf:
             with tempfile.TemporaryDirectory() as tmp_dir:
@@ -48,13 +95,7 @@ def load_model_from_keras_archive(path):
                 model.load_weights(weights_path)
         return model
     except Exception as e:
-        print('Failed to build/load model via app.py:', e)
-
-    # Last resort: try tf.keras.models.load_model
-    try:
-        return tf.keras.models.load_model(path)
-    except Exception as e:
-        raise RuntimeError(f'Unable to load model from {path}: {e}')
+        raise RuntimeError(f'Unable to build/load model from {path}: {e}')
 
 
 def main():

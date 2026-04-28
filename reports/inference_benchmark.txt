@@ -1,0 +1,16 @@
+==== Inference Benchmark ====
+timestamp: 2026-04-28T10:14:04.541617Z
+model: models/CCTV_Violence_Finetuned.keras
+tf_version: 2.21.0
+devices: CPU
+runs: 20
+warmup: 3
+batch_size: 1
+mean_s: 0.1559778600003483
+median_s: 0.15258079999875918
+min_s: 0.13405960000091
+max_s: 0.18407030000162194
+std_s: 0.014525172113930661
+p95_s: 0.17943287500074803
+p99_s: 0.18314281500144716
+

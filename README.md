@@ -577,33 +577,6 @@ Chúng tôi hoan nghênh các Pull Request!
 
 ---
 
-## 🎯 Roadmap 2026
-
-### 📅 Q2 2026 (Hiện Tại) ✅
-- ✅ Web interface production-ready
-- ✅ Two-step detection workflow
-- ✅ Segment extraction feature
-- ✅ Multi-GPU support
-
-### 📅 Q3 2026 (Sắp Tới)
-- ⏳ Real-time streaming analysis
-- ⏳ Multiple model ensemble
-- ⏳ Advanced filtering UI
-- ⏳ Admin dashboard
-
-### 📅 Q4 2026 (Kế Hoạch)
-- ⏳ Mobile app (iOS/Android)
-- ⏳ Cloud deployment (AWS/GCP)
-- ⏳ API marketplace
-- ⏳ Enterprise features
-
-### 🎯 2027 Vision
-- ⏳ Edge device support (Jetson, Intel NUC)
-- ⏳ Multi-camera coordination
-- ⏳ Real-time alert system
-- ⏳ Custom model training service
-
----
 
 ## 🙏 Lời Cảm Ơn
 
