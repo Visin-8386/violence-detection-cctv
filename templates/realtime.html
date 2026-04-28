@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hệ thống Giám sát Bạo lực Thời gian thực</title>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            --bg: #050505;
+            --surface: #121212;
+            --accent: #00ff41; /* Ma trận/An ninh */
+            --danger: #ff0000;
+            --text: #e0e0e0;
+            --muted: #666;
+            --border: #222;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Dashboard Header */
+        header {
+            padding: 1rem 2rem;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 700;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--accent);
+        }
+
+        .live-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: var(--danger);
+            animation: blink 1s infinite alternate;
+        }
+
+        @keyframes blink {
+            from { opacity: 1; }
+            to { opacity: 0.3; }
+        }
+
+        /* Main Layout */
+        main {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            gap: 1px;
+            background: var(--border);
+        }
+
+        .monitor-area {
+            background: var(--bg);
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .video-container {
+            width: 100%;
+            max-width: 800px;
+            aspect-ratio: 16/9;
+            background: #000;
+            border-radius: 4px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: 0 0 40px rgba(0, 255, 65, 0.1);
+            border: 1px solid var(--border);
+        }
+
+        #webcam {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scaleX(-1); /* Mirror effect */
+        }
+
+        /* Overlay Effect */
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%), 
+                        linear-gradient(90deg, rgba(255, 0, 0, 0.02), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.02));
+            background-size: 100% 2px, 3px 100%;
+        }
+
+        .hud-corner {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--accent);
+        }
+        .tl { top: 20px; left: 20px; border-right: 0; border-bottom: 0; }
+        .tr { top: 20px; right: 20px; border-left: 0; border-bottom: 0; }
+        .bl { bottom: 20px; left: 20px; border-right: 0; border-top: 0; }
+        .br { bottom: 20px; right: 20px; border-left: 0; border-top: 0; }
+
+        /* Sidebar Control */
+        .sidebar {
+            background: var(--surface);
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .card {
+            background: #1a1a1a;
+            border-radius: 8px;
+            padding: 1rem;
+            border: 1px solid var(--border);
+        }
+
+        .card-title {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            color: var(--muted);
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .status-box {
+            text-align: center;
+            padding: 1rem;
+            border-radius: 4px;
+            font-weight: 700;
+        }
+
+        .status-normal { color: var(--accent); border: 1px solid var(--accent); background: rgba(0, 255, 65, 0.05); }
+        .status-danger { color: var(--danger); border: 1px solid var(--danger); background: rgba(255, 0, 0, 0.1); animation: shake 0.2s infinite; }
+
+        @keyframes shake {
+            0% { transform: translate(1px, 1px) rotate(0deg); }
+            10% { transform: translate(-1px, -2px) rotate(-1deg); }
+            20% { transform: translate(-3px, 0px) rotate(1deg); }
+            30% { transform: translate(3px, 2px) rotate(0deg); }
+            40% { transform: translate(1px, -1px) rotate(1deg); }
+            50% { transform: translate(-1px, 2px) rotate(-1deg); }
+        }
+
+        .btn {
+            width: 100%;
+            padding: 0.75rem;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+            background: #252525;
+            color: white;
+            cursor: pointer;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            transition: all 0.2s;
+        }
+
+        .btn:hover { background: #333; }
+        .btn-primary { background: var(--accent); color: #000; border-color: var(--accent); }
+        .btn-primary:hover { background: #00cc33; }
+
+        #log-container {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            height: 200px;
+            overflow-y: auto;
+            color: #888;
+            display: flex;
+            flex-direction: column-reverse;
+        }
+
+        .log-entry { margin-bottom: 4px; }
+        .log-time { color: var(--muted); }
+        .log-val-normal { color: var(--accent); }
+        .log-val-danger { color: var(--danger); }
+
+        .fullscreen-alert {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255, 0, 0, 0.2);
+            pointer-events: none;
+            display: none;
+            z-index: 999;
+            border: 10px solid var(--danger);
+        }
+
+        canvas { display: none; }
+    </style>
+</head>
+<body>
+
+    <div class="fullscreen-alert" id="master-alert"></div>
+
+    <header>
+        <div class="logo">
+            <i data-lucide="activity"></i>
+            VIOLENCE DETECTOR v2.0
+        </div>
+        <div class="live-indicator" id="live-indicator" style="display: none;">
+            <i data-lucide="circle" fill="currentColor"></i>
+            LIVE RECORDING
+        </div>
+    </header>
+
+    <main>
+        <div class="monitor-area">
+            <div class="video-container">
+                <video id="webcam" autoplay playsinline></video>
+                <div class="overlay"></div>
+                <div class="hud-corner tl"></div>
+                <div class="hud-corner tr"></div>
+                <div class="hud-corner bl"></div>
+                <div class="hud-corner br"></div>
+            </div>
+            <p id="setup-message" style="margin-top: 1rem; color: var(--muted);">Chưa có nguồn video. Nhấn "Bật Camera" để bắt đầu.</p>
+        </div>
+
+        <div class="sidebar">
+            <div class="card">
+                <div class="card-title"><i data-lucide="settings"></i> ĐIỀU KHIỂN</div>
+                <button class="btn btn-primary" id="start-btn">
+                    <i data-lucide="video"></i> BẬT CAMERA
+                </button>
+            </div>
+
+            <div class="card">
+                <div class="card-title"><i data-lucide="database"></i> TRẠNG THÁI HIỆN TẠI</div>
+                <div class="status-box status-normal" id="status-box">HỆ THỐNG SẴN SÀNG</div>
+            </div>
+
+            <div class="card">
+                <div class="card-title"><i data-lucide="terminal"></i> NHẬT KÝ HỆ THỐNG</div>
+                <div id="log-container">
+                    <div class="log-entry">> Hệ thống đã khởi động...</div>
+                </div>
+            </div>
+
+            <div class="card" style="margin-top: auto;">
+                <div style="font-size: 0.7rem; color: var(--muted);">
+                    <p>MÔ HÌNH: CCTV-V2 (MobileNetV2 + BiLSTM)</p>
+                    <p>ĐỘ TRỄ: <span id="latency">-</span>ms</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <canvas id="canvas" width="128" height="128"></canvas>
+
+    <script>
+        lucide.createIcons();
+
+        const video = document.getElementById('webcam');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const startBtn = document.getElementById('start-btn');
+        const statusBox = document.getElementById('status-box');
+        const logContainer = document.getElementById('log-container');
+        const latencyEl = document.getElementById('latency');
+        const setupMsg = document.getElementById('setup-message');
+        const masterAlert = document.getElementById('master-alert');
+        const liveIndicator = document.getElementById('live-indicator');
+
+        let isRunning = false;
+        let frameBuffer = [];
+        const BUFFER_SIZE = 15;
+
+        // Bật camera
+        startBtn.addEventListener('click', async () => {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                video.srcObject = stream;
+                setupMsg.style.display = 'none';
+                startBtn.classList.remove('btn-primary');
+                startBtn.innerHTML = '<i data-lucide="video-off"></i> DỪNG CAMERA';
+                startBtn.onclick = () => location.reload();
+                liveIndicator.style.display = 'flex';
+                isRunning = true;
+                
+                startProcessing();
+                addLog("Nguồn video đã kết nối thành công.", "normal");
+                lucide.createIcons();
+            } catch (err) {
+                console.error(err);
+                alert("Không thể truy cập Camera. Vui lòng kiểm tra quyền truy cập.");
+            }
+        });
+
+        function addLog(msg, type) {
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            const time = new Date().toLocaleTimeString();
+            entry.innerHTML = `<span class="log-time">[${time}]</span> <span class="log-val-${type}">${msg}</span>`;
+            logContainer.appendChild(entry);
+        }
+
+        // Vòng lặp capture frames (15 frames per second)
+        function startProcessing() {
+            setInterval(() => {
+                if (!isRunning) return;
+                
+                // Capture frame hiện tại
+                ctx.drawImage(video, 0, 0, 128, 128);
+                const frameData = canvas.toDataURL('image/jpeg', 0.6);
+                frameBuffer.push(frameData);
+                
+                // Nếu đủ buffer 15 frames, gửi đi phân tích
+                if (frameBuffer.length >= BUFFER_SIZE) {
+                    const framesToSend = [...frameBuffer];
+                    frameBuffer = frameBuffer.slice(5); // Window trượt, giữ lại 10 frame cũ
+                    sendForAnalysis(framesToSend);
+                }
+            }, 66); // ~15 FPS
+        }
+
+        async function sendForAnalysis(frames) {
+            const startTime = performance.now();
+            try {
+                const response = await fetch('/predict_realtime', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ frames })
+                });
+                const data = await response.json();
+                const endTime = performance.now();
+                latencyEl.textContent = Math.round(endTime - startTime);
+
+                if (data.status === 'success') {
+                    updateUI(data);
+                }
+            } catch (err) {
+                console.error("Analysis error:", err);
+            }
+        }
+
+        function updateUI(data) {
+            if (data.class === 'Violence') {
+                statusBox.textContent = "PHÁT HIỆN BẠO LỰC!";
+                statusBox.className = "status-box status-danger";
+                masterAlert.style.display = 'block';
+                addLog(`CẢNH BÁO: Phát hiện bạo lực (${Math.round(data.confidence * 100)}%)`, "danger");
+            } else {
+                statusBox.textContent = "TRẠNG THÁI: AN TOÀN";
+                statusBox.className = "status-box status-normal";
+                masterAlert.style.display = 'none';
+                // addLog("Hệ thống: Bình thường", "normal");
+            }
+        }
+    </script>
+</body>
+</html>
