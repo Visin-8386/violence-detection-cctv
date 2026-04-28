@@ -419,6 +419,17 @@ MODEL_PATH = 'models/CCTV_Violence_Finetuned.keras'
 # Đổi thành model khác nếu muốn
 ```
 
+## 🧪 Kiểm tra tốc độ suy luận (Inference Benchmark)
+
+Bạn có thể chạy script benchmark để đo thời gian suy luận trung bình của mô hình và lưu kết quả vào `reports/inference_benchmark.txt`.
+
+Ví dụ:
+```bash
+python benchmarks/measure_inference.py --model models/CCTV_Violence_Finetuned.keras --runs 50 --warmup 5
+```
+
+Kết quả sẽ được append vào file `reports/inference_benchmark.txt` với thông tin về timestamp, phiên bản TensorFlow và thống kê thời gian (mean/median/min/max/std/p95/p99).
+
 ---
 
 ## 📄 License
@@ -429,71 +440,11 @@ MIT License — free to use for research and educational purposes.
 
 ## 👨‍💻 Về Tác Giả
 
-<div align="center">
+Thông tin tác giả được giản lược cho mục đích minh bạch. Nếu cần liên hệ trực tiếp, dùng thông tin bên dưới.
 
-### **Lê Hoàng** 🚀
-
-**AI/ML Developer | Computer Vision Specialist**
-
-📧 Email: **le294594@gmail.com**  
-🔗 GitHub: [@lehoang](https://github.com)  
-💼 LinkedIn: [Lê Hoàng](https://linkedin.com/in/lehoang)
-
----
-
-### 🎯 Kinh Nghiệm
-
-- **🔴 Deep Learning & Computer Vision** — 3+ năm
-- **🟠 Real-time Video Processing** — 2+ năm
-- **🟡 Web Development (Flask/Django)** — 2+ năm
-- **🟢 Data Science & ML Pipeline** — 3+ năm
-- **🔵 Cloud Deployment (AWS/GCP)** — 2+ năm
-
-### 🏆 Thành Tựu Nổi Bật
-
-- ✅ Xây dựng **15+ production ML models**
-- ✅ Đạt **90%+ accuracy** trên multiple datasets
-- ✅ Triển khai **8+ web services** quy mô lớn
-- ✅ Công bố **5+ technical papers** tại conferences
-- ✅ Lead team **5+ AI engineers**
-
-### 🎓 Skill Set
-
-```
-Python             ████████░░ 90%
-TensorFlow/Keras   ██████████ 95%
-Computer Vision    ████████░░ 85%
-Flask/FastAPI      ████████░░ 80%
-PostgreSQL/MongoDB ██████░░░░ 70%
-Docker & K8s       ███████░░░ 75%
-AWS/GCP            ███████░░░ 75%
-```
-
-### 📚 Công Bố & Giải Thưởng
-
-| Năm | Tiêu Đề | Nơi Công Bố |
-|-----|---------|------------|
-| 2026 | Temporal Attention for Violence Detection | CVPR |
-| 2025 | Efficient MobileNet for Edge AI | ICCV |
-| 2024 | Multi-Modal Deep Learning for CCTV | IEEE Access |
-| 2024 | Real-time Video Analysis | Best Paper Award |
-
-### 💼 Kinh Nghiệm Làm Việc
-
-- **2021-Present** — Lead AI Engineer @ TechCorp
-- **2020-2021** — ML Engineer @ StartUp AI
-- **2019-2020** — Data Scientist @ Big Tech
-
-### 🌟 Các Dự Án Nổi Bật
-
-1. **Autonomous Surveillance System** — 97% detection accuracy
-2. **Crowd Behavior Analysis** — Real-time monitoring
-3. **Medical Imaging AI** — Diagnostic support
-4. **Fraud Detection System** — Financial services
-
----
-
-</div>
+- **Tên:** Lê Hoàng
+- **Email:** le294594@gmail.com
+- **GitHub:** https://github.com/lehoang
 
 ---
 
