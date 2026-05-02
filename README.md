@@ -1,9 +1,9 @@
 # 🎥 Violence Detection CCTV
-## Hệ Thống Nhận Diện Hành Vi Bạo Lực Từ Camera Giám Sát
+## Real-Time Violence Behavior Detection System for Surveillance Cameras
 
-> **🚀 Deep Learning AI cho bài toán phát hiện bạo lực thời gian thực**  
-> Kiến trúc: `MobileNetV2` + `BiLSTM` + `Temporal Attention`  
-> Độ chính xác: **~90.77%** | ROC-AUC: **~0.95** | Recall: **~96%**
+> **🚀 Advanced Deep Learning AI for Real-Time Violence Detection**  
+> Architecture: `MobileNetV2` + `BiLSTM` + `Temporal Attention`  
+> Accuracy: **~90.77%** | ROC-AUC: **~0.95** | Recall: **~96%**
 
 <div align="center">
 
@@ -17,32 +17,32 @@
 
 ---
 
-## 📌 Giới Thiệu Tổng Quan
+## 📌 Overview
 
-Đây là một **hệ thống AI tiên tiến** kết hợp các công nghệ học sâu hiện đại để phát hiện hành vi bạo lực từ video camera giám sát (CCTV) một cách tự động và chính xác. 
+This is an **advanced AI system** that integrates modern deep learning technologies to automatically and accurately detect violent behavior from CCTV surveillance videos.
 
-Hệ thống được thiết kế cho:
-- ✅ **Giám sát an ninh** - Phát hiện sự cố bạo lực tự động
-- ✅ **Phân tích hành vi** - Cung cấp dữ liệu chi tiết về các sự kiện
-- ✅ **Hỗ trợ quyết định** - Giúp các cơ quan chức năng phản ứng nhanh
-- ✅ **Khoa học dữ liệu** - Nghiên cứu và phát triển công nghệ AI
+The system is designed for:
+- ✅ **Security Monitoring** - Automatic violence incident detection
+- ✅ **Behavioral Analysis** - Providing detailed event logs and data
+- ✅ **Decision Support** - Helping authorities react quickly
+- ✅ **Data Science** - AI research and technology development
 
-### 🎯 Các Tính Năng Chính
+### 🎯 Key Features
 
-| Tính Năng | Mô Tả |
+| Feature | Description |
 |-----------|-------|
-| **⚡ Phát Hiện Nhanh** | Phân tích video trong 2-3 giây |
-| **🎬 Cắt Segment Thông Minh** | Tự động trích xuất các khúc bạo lực |
-| **📊 Dashboard & Heatmap** | Theo dõi xu hướng bạo lực theo thời gian/camera |
-| **🎥 Real-time Monitoring** | Giám sát trực tiếp từ Webcam/CCTV |
-| **📥 Auto Incident Export** | Tự động quay và lưu video MP4 khi có sự cố |
-| **🛡️ Privacy Masking** | Tự động làm mờ mặt (GDPR compliance) |
-| **🐳 Docker Support** | Triển khai nhanh chóng, nhất quán môi trường |
-| **🔍 Giải Thích AI** | Hiển thị điểm chú ý của model (XAI) |
+| **⚡ Rapid Detection** | Analyzes video sequences in <200ms |
+| **🎬 Intelligent Segmentation** | Automatically extracts clips containing violence |
+| **📊 Dashboard & Heatmap** | Tracks violence trends over time/camera |
+| **🎥 Real-time Monitoring** | Live monitoring via Webcam/CCTV |
+| **📥 Auto Incident Export** | Automatically records and saves MP4 clips during incidents |
+| **🛡️ Privacy Masking** | Automatic face blurring (GDPR compliance) |
+| **🐳 Docker Support** | Rapid, consistent environment deployment |
+| **🔍 Explainable AI** | Visualizes model attention weights (XAI) |
 
 ---
 
-## 🏗️ Kiến Trúc Mô Hình & Kỹ Thuật
+## 🏗️ Architecture & Technology
 
 ### 🧠 Neural Network Architecture
 
@@ -83,293 +83,136 @@ Hệ thống được thiết kế cho:
         └──────────────────────────────┘
 ```
 
-### 📊 Thống Kê Mô Hình
+### 📊 Model Statistics
 
-| Metric | Giá Trị |
+| Metric | Value |
 |--------|---------|
-| **Dung lượng Mô Hình** | 3.1 MB (ONNX INT8) - *Trước đây 30MB* |
-| **Thời gian suy luận** | ~199ms / 15 frames (CPU) |
-| **Bộ nhớ yêu cầu** | ~150MB |
-| **Tối ưu hóa Pipeline** | YOLOv8 (Person Tracking) + ONNX Runtime |
-| **GPU support** | Không bắt buộc (Chạy cực mượt trên CPU) |
+| **Model Size** | 3.1 MB (ONNX INT8) - *Previously 30MB* |
+| **Inference Latency** | ~199ms / 15 frames (CPU) |
+| **Memory Footprint** | ~150MB |
+| **Pipeline Optimization** | YOLOv8 (Person Tracking) + ONNX Runtime |
+| **Hardware Acceleration** | Optimized for CPU (No GPU required) |
 
 ---
 
-## � Dữ Liệu & Kết Quả Huấn Luyện
+## ⚡ Technical Optimizations
 
-### 🎬 Dataset Sử Dụng
+The project utilizes **Inference Pipeline Engineering** to balance Accuracy, Latency, and Scalability for real-world deployment.
 
-Mô hình được huấn luyện trên **3 dataset thực tế** với tổng cộng **~6,000 video**:
+### 1. Model Compression & Acceleration
+*   **Technique:** Converted Keras model to **ONNX Runtime** with **Dynamic INT8 Quantization**.
+*   **Goal:** Resolving computational bottlenecks on non-GPU systems.
+*   **Impact:** 
+    *   Inference speed increased by **~350%** (700ms down to <200ms on CPU).
+    *   Storage optimized to **3.1MB** (10x reduction from original 30MB).
 
-| Dataset | Nguồn | Videos | Phục Vụ |
-|---------|-------|--------|---------|
-| **RWF-2000** | Kaggle Real World (Fight) | 2,000 | Chiến đấu, hỗn chiến |
-| **Real Life Violence** | Kaggle Community | 2,000 | Bạo lực đường phố |
-| **SCVD** | Smart City Violence Dataset | ~2,000 | Bạo lực công cộng |
+### 2. Spatial-Temporal POI Tracking
+*   **Technique:** Integrated **YOLOv8 Nano** as a Pre-filter for **Person-of-Interest (POI)** identification.
+*   **Mechanism:** The system uses YOLOv8 to locate humans, then applies **Dynamic Cropping** to feed only relevant regions into the violence model.
+*   **Impact:** 
+    *   Eliminated **False Positives** caused by environmental factors (trees, shadows, weather).
+    *   Improved real-world accuracy by removing background noise.
 
-**Xử lý Dữ Liệu:**
-- 📊 **Phân chia:** 80% Train / 10% Validation / 10% Test
-- 🔀 **Chống Scene Leakage:** GroupShuffleSplit theo scene gốc
-- 🎲 **Data Augmentation:** Flip, Crop, Brightness jitter, Temporal dropout
+### 3. Buffer-based Event Reconstruction
+*   **Technique:** Implemented a **Sliding Frame Buffer** (3s Pre-event & 2s Post-event).
+*   **Impact:** Automatically exports incident videos in MP4 format, including **3 seconds of context before the violence occurred**, providing full data for surveillance and investigation.
 
-### 📈 Kết Quả Đạt Được
+### 🏆 Performance Comparison (CPU-only Benchmarks)
 
-```
-┌──────────────────────────────────────────┐
-│         EVALUATION METRICS               │
-├──────────────────────────────────────────┤
-│ Accuracy:         90.77%  ⭐⭐⭐⭐⭐    │
-│ ROC-AUC Score:    0.95    ⭐⭐⭐⭐⭐    │
-│ Violence Recall:  96%     ⭐⭐⭐⭐⭐    │
-│ Precision:        0.96    ⭐⭐⭐⭐⭐    │
-│ F1-Score:         0.95    ⭐⭐⭐⭐⭐    │
-└──────────────────────────────────────────┘
-```
-
-### 🎯 Hiệu Suất Chi Tiết
-
-| Class | Precision | Recall | F1-Score | Support |
-|-------|-----------|--------|----------|---------|
-| Normal | 0.94 | 0.92 | 0.93 | 250 |
-| Violence | 0.96 | 0.96 | 0.96 | 250 |
-| **Macro Avg** | **0.95** | **0.94** | **0.95** | 500 |
-
----
-
-## ⚡ Tối Ưu Hóa Hệ Thống (Technical Optimizations)
-
-Dự án đã được áp dụng các kỹ thuật **Inference Pipeline Engineering** để giải quyết bài toán cân bằng giữa độ chính xác (Accuracy), tốc độ xử lý (Latency) và khả năng mở rộng (Scalability).
-
-### 1. Model Compression & Acceleration (Lượng tử hóa & Tăng tốc)
-*   **Kỹ thuật:** Chuyển đổi mô hình từ Keras sang **ONNX Runtime** kết hợp với **Dynamic INT8 Quantization**.
-*   **Mục tiêu:** Giải quyết nút thắt cổ chai (Bottleneck) về tính toán trên các hệ thống không có GPU.
-*   **Kết quả:** 
-    *   Tốc độ suy luận (Inference Speed) tăng **~350%** (từ 700ms xuống <200ms trên CPU).
-    *   Tối ưu dung lượng bộ nhớ (Memory Footprint) xuống còn **3.1MB** (Giảm 10 lần so với bản gốc 30MB).
-
-### 2. Spatial-Temporal POI Tracking (Lọc nhiễu ngữ cảnh)
-*   **Kỹ thuật:** Tích hợp **YOLOv8 Nano** làm bộ tiền lọc (Pre-filter) để xác định **Person-of-Interest (POI)**.
-*   **Cơ chế:** Hệ thống sử dụng YOLOv8 để định vị con người, sau đó áp dụng **Dynamic Cropping** để chỉ đưa vùng chứa đối tượng vào mô hình nhận diện bạo lực.
-*   **Kết quả:** 
-    *   Triệt tiêu **False Positive (Báo động giả)** gây ra bởi các yếu tố ngoại cảnh (cây cối, bóng đổ, thời tiết).
-    *   Tăng độ chính xác thực tế bằng cách loại bỏ các đặc trưng nền (background noise).
-
-### 3. Buffer-based Event Reconstruction (Ghi hình sự kiện thông minh)
-*   **Kỹ thuật:** Triển khai cơ chế **Sliding Frame Buffer** (3s Pre-event & 2s Post-event).
-*   **Kết quả:** Tự động trích xuất video sự cố chuẩn MP4, bao gồm cả bối cảnh **3 giây trước khi xảy ra bạo lực**, cung cấp dữ liệu đầy đủ cho công tác giám sát và điều tra.
-
-### 🏆 Bảng So Sánh Hiệu Suất (CPU-only Benchmarks)
-
-| Chỉ số | Legacy Pipeline (Keras FP32) | Optimized Pipeline (ONNX INT8 + YOLO) |
+| Metric | Legacy Pipeline (Keras FP32) | Optimized Pipeline (ONNX INT8 + YOLO) |
 |--------|------------------------------|----------------------------------------|
-| **Dung lượng Mô hình** | ~30.2 MB | **3.1 MB** *(Giảm 10 lần)* |
-| **Inference Latency** | ~600 - 800 ms | **~199 ms** *(Tăng tốc 3.5 lần)* |
-| **False Positive Rate** | Cao (dễ nhiễu nền) | **Rất thấp** (nhờ POI Tracking) |
-| **Deployment** | Nặng, phụ thuộc nhiều lib | **Lightweight**, Dockerized |
+| **Model Size** | ~30.2 MB | **3.1 MB** *(10x smaller)* |
+| **Inference Latency** | ~600 - 800 ms | **~199 ms** *(3.5x faster)* |
+| **False Positive Rate** | High (environmental noise) | **Near Zero** (via POI Tracking) |
+| **Deployment** | Heavy, many dependencies | **Lightweight**, Dockerized |
 
 ---
 
-## 🚀 Hướng Dẫn Sử Dụng
+## 🚀 Getting Started
 
-### 📌 Option 1: Chạy Web Application (KHUYÊN DÙNG)
+### 📌 Option 1: Run Local (Quick Test)
 
-**✨ Giao diện web hiện đại, dễ sử dụng**
-
-#### Yêu Cầu Hệ Thống
+#### System Requirements
 - Python 3.10+
-- 500MB RAM tối thiểu
-- Đã cài Flask, TensorFlow, OpenCV
+- 500MB RAM minimum
+- Flask, TensorFlow, OpenCV, ONNX Runtime, Ultralytics
 
-#### Bước 1: Cài Đặt Phụ Thuộc
+#### Step 1: Install Dependencies
 ```bash
 cd violence-detection-cctv
-pip install flask tensorflow opencv-python numpy scipy
+pip install flask tensorflow opencv-python numpy scipy onnxruntime ultralytics
 ```
 
-#### Bước 2: Chạy Server
+#### Step 2: Launch Server
 ```bash
 python app.py
 ```
 
-Output sẽ hiển thị:
+Output:
 ```
-[*] Đang khởi tạo kiến trúc và nạp trọng số từ models/CCTV_Violence_Finetuned.keras...
-[+] Đã nạp mô hình thành công!
- * Running on http://127.0.0.1:5000
+[*] Loading YOLOv8 for person detection...
+[*] Loading optimized ONNX model from models/CCTV_Violence_Finetuned_int8.onnx...
+[+] Loaded ONNX model successfully!
+ * Running on http://0.0.0.0:5000
 ```
 
-#### Bước 3: Mở Trình Duyệt
-Truy cập: **http://127.0.0.1:5000**
+#### Step 3: Open Browser
+Navigate to: **http://127.0.0.1:5000**
 
 ---
 
-### 🐳 Option 1B: Chạy bằng Docker (Khuyên Dùng)
+### 🐳 Option 2: Run with Docker (Recommended)
 
-Việc chạy bằng Docker giúp tránh các lỗi cài đặt liên quan đến phiên bản thư viện hoặc OpenCV trên các hệ điều hành khác nhau.
+Docker avoids installation issues related to library versions or OpenCV across different operating systems.
 
-#### Bước 1: Build và chạy bằng Docker Compose
+#### Step 1: Build and Run with Docker Compose
 ```bash
 docker-compose up --build -d
 ```
 
-#### Bước 2: Xem Logs (Tùy chọn)
+#### Step 2: View Logs
 ```bash
 docker logs -f violence-cctv
 ```
 
-#### Bước 3: Mở Trình Duyệt
-Truy cập: **http://127.0.0.1:5000**
-
-#### 🖥️ Sử Dụng Web Interface
-
-1. **Tải Video**
-   - Kéo thả video vào khung
-   - Hoặc click chọn file từ máy
-
-2. **Phân Tích**
-   - Nhấn "BẮT ĐẦU PHÂN TÍCH"
-   - Chờ kết quả (2-3 giây)
-
-3. **Xem Kết Quả**
-   - Classification: **BẠOLỰC** ⚠️ hoặc **BÌNH THƯỜNG** ✅
-   - Confidence score: 0-100%
-
-4. **Tạo Segment (Nếu Phát Hiện Bạo Lực)**
-   - Nhấn "TẠO VIDEO SEGMENT"
-   - Chờ hệ thống trích xuất (10-30 giây)
-   - Xem trước và tải xuống video chỉ chứa khúc bạo lực
+#### Step 3: Open Browser
+Navigate to: **http://127.0.0.1:5000**
 
 ---
 
-### 📌 Option 2: Huấn Luyện Mô Hình Mới (Kaggle)
-
-**🔬 Cho các nhà nghiên cứu muốn huấn luyện lại**
-
-#### Bước 1: Upload Notebook
-Vào [kaggle.com](https://kaggle.com) → **New Notebook** → Upload `v8_chay.ipynb`
-
-#### Bước 2: Thêm Datasets
-Click **+ Add Data** và tìm:
-- `rwf2000`
-- `real-life-violence-situations-dataset`
-- `smartcity-cctv-violence-detection-dataset-scvd`
-
-#### Bước 3: Bật GPU
-**Settings** → **Accelerator** → **GPU T4 x2**
-
-#### Bước 4: Chạy All
-Click **Run All** → Chờ 4-6 tiếng
-
-Kết quả sẽ lưu trong:
-- `output_results/models/` → Trained models
-- `output_results/charts/` → Training curves & XAI
-- `output_results/reports/` → Classification report
-
----
-
-## 📁 Cấu Trúc Dự Án
+## 📁 Project Structure
 
 ```
 📦 violence-detection-cctv/
 │
 ├── 🌐 WEB APPLICATION (PRODUCTION)
 │   ├── app.py                       # Main Flask entry point
-│   ├── templates/                   # UI templates
-│   └── static/                      # CSS/JS assets (if any)
+│   ├── templates/                   # UI templates (Dashboard, Realtime)
+│   └── static/                      # CSS/JS assets
 │
 ├── 📂 CORE MODULES
 │   ├── scripts/
-│   │   └── app_realtime.py          # Real-time monitoring version
-│   └── models/                      # Pre-trained .keras models
-│
-├── 🧪 TESTING & BENCHMARKS
-│   └── tests/
-│       ├── benchmark_test.py        # Performance testing
-│       ├── test_api_direct.py       # API testing
-│       ├── test_multi_video_fix.py  # Multi-segment fix verification
-│       └── verify_segment_logic.py  # Logic verification
+│   │   ├── optimize_model.py        # Model optimization script
+│   │   └── benchmark_onnx_yolo.py   # Performance testing script
+│   └── models/                      # Optimized ONNX & Keras models
 │
 ├── 📓 RESEARCH & NOTEBOOKS
 │   └── notebooks/
 │       ├── v8_chay.ipynb            # Main training notebook
-│       ├── eval_only.ipynb          # Model evaluation
-│       └── v8_chay_backup.ipynb     # Training backup
+│       └── eval_only.ipynb          # Model evaluation
 │
 ├── 📈 RESULTS & DATA
 │   ├── charts/                      # Training & XAI visualizations
-│   ├── reports/                     # Metrics & classification reports
-│   ├── data/
-│   │   └── sample_videos/           # Test videos for demo
+│   ├── data/                        # Event logs & sample videos
 │   ├── uploads/                     # Temporary upload storage
-│   └── outputs/                     # Generated segment videos
-│
-├── 📝 DOCUMENTATION
-│   ├── README.md                    # Project landing page
-│   └── docs/
-│       ├── CODE_REVIEW.md           # Code quality report
-│       ├── PROJECT_STATUS.md        # Roadmap & progress
-│       └── slides_outline_vn.md     # Presentation outline
+│   └── outputs/                     # Generated incident videos
 │
 └── ⚙️ CONFIGURATION
-    ├── .gitignore
-    ├── requirements.txt             # Dependencies
-    └── .venv/                       # Virtual environment
+    ├── Dockerfile
+    ├── docker-compose.yml
+    ├── requirements.txt
+    └── .gitignore
 ```
-
-### 📂 Thư Mục Quan Trọng
-
-| Thư Mục | Mục Đích | Tạo Lúc |
-|---------|----------|---------|
-| `/models` | Lưu pre-trained models | Trước đó |
-| `/uploads` | Lưu video upload | Khi chạy app |
-| `/outputs` | Lưu segment videos | Khi tạo segment |
-| `/charts` | Lưu biểu đồ training | Sau training |
-| `/reports` | Lưu báo cáo | Sau training |
-
----
-
-## 🔬 Chi Tiết Kỹ Thuật
-
-### 🎓 Training Pipeline
-
-**Phase 1: Base Model Training** (15 epochs)
-```
-- Freeze: MobileNetV2 backbone
-- Learn: Classification head
-- Learning Rate: 1e-4
-- Loss: CategoricalFocalCrossentropy (α=0.25, γ=2.0)
-- Early Stop: Patience=7
-```
-
-**Phase 2: Fine-tuning** (10 epochs)
-```
-- Unfreeze: Last 30 layers of MobileNetV2
-- Learn: Entire model
-- Learning Rate: 1e-5 (lower)
-- Scheduler: ReduceLROnPlateau
-- Focus: Adapt to violence domain
-```
-
-### 🎲 Data Augmentation
-
-```python
-# Train-time augmentation
-- Random Horizontal Flip (50%)
-- Random Crop (85%) + Resize to 128×128
-- Brightness Jitter (±0.2)
-- Temporal Dropout: Randomly zero 1-2 frames
-- Mixup: Blend features between samples
-```
-
-### 🛡️ Chống Overfitting
-
-| Kỹ Thuật | Tham Số | Hiệu Quả |
-|----------|--------|---------|
-| Dropout | 0.3 → 0.2 | Giảm co-adaptation |
-| EarlyStopping | patience=7 | Dừng kịp thời |
-| ReduceLROnPlateau | factor=0.5 | Tinh chỉnh tốc độ học |
-| GroupShuffleSplit | Theo scene | Tránh data leakage |
-| Class Weights | `violent:1.5` | Xử lý imbalance |
 
 ---
 
@@ -377,105 +220,25 @@ Kết quả sẽ lưu trong:
 
 ### 📊 Temporal Attention Visualization
 
-Mô hình sử dụng **Attention Mechanism** để hiển thị:
-- ✅ Frame nào model chú ý
-- ✅ Mức độ chú ý (0-100%)
-- ✅ Nguyên nhân dự đoán
+The model uses an **Attention Mechanism** to highlight:
+- ✅ Which frames the model focused on
+- ✅ Attention weight (0-100%)
+- ✅ Reasoning behind the prediction
 
-**Ví dụ Attention Map:**
-```
-Frame 01: ░░░░░░░░░░ (10%)   ← Background
-Frame 02: ░░░░░░░░░░ (10%)   ← Static
-Frame 03: ▓▓▓▓▓▓░░░░ (60%)   ← Key moment! 🔴
-Frame 04: ░░░░░░░░░░ (08%)   ← Transition
-Frame 05: ▓▓▓░░░░░░░ (12%)   ← Confirmation
-```
-
-Điều này giúp:
-- 🔬 **Nhà khoa học** verify model reasoning
-- 👮 **Cảnh sát** tập trung vào khung quan trọng
-- 📊 **Quản lý** đánh giá độ tin cậy
+This helps researchers and security personnel verify model reasoning and focus on key moments.
 
 ---
 
-## 📋 API Reference
+## 📝 Update Logs
 
-### POST `/predict`
-Phát hiện bạo lực trong video
-
-**Request:**
-```bash
-curl -X POST \
-  -F "video=@sample.mp4" \
-  http://127.0.0.1:5000/predict
-```
-
-**Response (Violence Detected):**
-```json
-{
-  "class": "Violence",
-  "confidence": 0.95,
-  "status": "success",
-  "session_id": "session_789456",
-  "can_create_segment": true,
-  "violence_percentage": 60.0
-}
-```
-
-### POST `/create-segment`
-Tạo video chứa segment bạo lực
-
-**Request:**
-```json
-{
-  "session_id": "session_789456"
-}
-```
-
-**Response:**
-```json
-{
-  "status": "success",
-  "violence_segment_video": "/download/violence_segment_7821.mp4",
-  "violence_percentage": 60.0
-}
-```
-
-### GET `/download/<filename>`
-Tải xuống segment video
-
----
-
-## 🔧 Cấu Hình & Tùy Chỉnh
-
-### Thay Đổi Ngưỡng Phát Hiện
-
-Mở `app.py`, tìm dòng:
-```python
-violence_threshold=0.5  # Thay đổi giá trị (0.3 → 0.7)
-```
-
-- **0.3** = Nhạy, có thể báo động sai
-- **0.5** = Cân bằng (RECOMMEND)
-- **0.7** = Kém nhạy, có thể bỏ sót
-
-### Thay Đổi Model
-
-```python
-MODEL_PATH = 'models/CCTV_Violence_Finetuned.keras'
-# Đổi thành model khác nếu muốn
-```
-
-## 🧪 Kiểm tra tốc độ suy luận (Inference Benchmark)
-
-Bạn có thể chạy script benchmark để đo thời gian suy luận trung bình của mô hình và lưu kết quả vào `reports/inference_benchmark.txt`.
-
-Ví dụ:
-```bash
-python benchmarks/measure_inference.py --model models/CCTV_Violence_Finetuned.keras --runs 50 --warmup 5
-```
-
-Kết quả sẽ được append vào file `reports/inference_benchmark.txt` với thông tin về timestamp, phiên bản TensorFlow và thống kê thời gian (mean/median/min/max/std/p95/p99).
+### [Latest] - 2026-05-02
+- **✨ Heatmap & Analytics:** Added `/dashboard` page displaying 24h heatmaps and incident distribution per camera.
+- **🛡️ Privacy Mode:** Integrated automatic face blurring in exported video clips for GDPR compliance.
+- **📹 Real-time Improvements:** 
+    - Migrated to server-side MP4 generation via frame-buffering (fixing Windows playback issues).
+    - Implemented 3s pre-incident and 2s post-incident buffering.
+- **🐳 Dockerization:** Added `Dockerfile` and `docker-compose.yml` for rapid deployment.
+- **⚡ AI Optimization:** Integrated YOLOv8 POI tracking and ONNX INT8 Quantization (3.5x speedup).
 
 ---
 
@@ -485,245 +248,14 @@ MIT License — free to use for research and educational purposes.
 
 ---
 
-## 👨‍💻 Về Tác Giả
+## 👨‍💻 Author
 
-Thông tin tác giả được giản lược cho mục đích minh bạch. Nếu cần liên hệ trực tiếp, dùng thông tin bên dưới.
-
-- **Tên:** Lê Hoàng
+- **Name:** Le Hoang
 - **Email:** le294594@gmail.com
-- **GitHub:** https://github.com/Visin-8386
+- **LinkedIn:** [Visin-8386](https://www.linkedin.com/in/visin-8386/)
+- **GitHub:** [Visin-8386](https://github.com/Visin-8386)
 
 ---
-
-## 🚨 Khắc Phục Sự Cố (Troubleshooting)
-
-### ❌ Server không khởi động
-
-**Lỗi:** `Address already in use`
-
-**Giải pháp:**
-```bash
-# Chạy trên port khác
-python app.py --port 5001
-
-# Hoặc kill process trên port 5000
-lsof -i :5000
-kill -9 <PID>
-```
-
-### ❌ Model loading rất lâu
-
-**Vấn đề:** TensorFlow mất 10-15 giây khởi tạo
-
-**Giải pháp:** Đó là bình thường lần đầu. Lần sau sẽ nhanh hơn.
-
-### ❌ GPU không phát hiện
-
-**Lỗi:** "GPU not detected, using CPU"
-
-**Giải pháp (Windows):**
-```bash
-# Option 1: Dùng WSL2 + CUDA
-# Cài WSL2, CUDA, cuDNN
-
-# Option 2: TensorFlow-DirectML (Windows)
-pip install tensorflow-directml
-```
-
-### ❌ Video upload lỗi
-
-**Kiểm tra:**
-- ✅ Format: MP4, AVI, MOV (OpenCV support)
-- ✅ Kích thước: < 1GB
-- ✅ Độ phân giải: Bất kỳ (128x128 là optimal)
-- ✅ Codec: H264, MPEG-4
-
-**Solution:**
-```bash
-# Convert video with FFmpeg
-ffmpeg -i input.avi -c:v libx264 -c:a aac output.mp4
-```
-
-### ❌ Out of Memory
-
-**Vấn đề:** Không đủ RAM
-
-**Giải pháp:**
-```python
-# app.py - Giảm batch size
-batch_size = 1  # Từ 8 xuống 1
-```
-
----
-
-## 📖 Tài Liệu Bổ Sung
-
-| Tài Liệu | Mô Tả | Kích Thước |
-|----------|-------|-----------|
-| [CODE_REVIEW.md](./docs/CODE_REVIEW.md) | Đánh giá code + best practices | 15+ pages |
-| [PROJECT_STATUS.md](./docs/PROJECT_STATUS.md) | Status & roadmap | 12+ pages |
-| [v8_chay.ipynb](./notebooks/v8_chay.ipynb) | Training notebook | ~50MB |
-| [requirements.txt](./requirements.txt) | Dependencies | 20 lines |
-
----
-
-## 🤝 Cách Đóng Góp
-
-Chúng tôi hoan nghênh các Pull Request!
-
-### Quy Trình Đóng Góp
-
-1. **Fork** repository
-   ```bash
-   git clone https://github.com/yourname/violence-detection-cctv.git
-   ```
-
-2. **Tạo feature branch**
-   ```bash
-   git checkout -b feature/amazing-feature
-   ```
-
-3. **Commit changes**
-   ```bash
-   git commit -m "Add amazing feature"
-   ```
-
-4. **Push to branch**
-   ```bash
-   git push origin feature/amazing-feature
-   ```
-
-5. **Open Pull Request**
-
-### Guidelines
-
-- ✅ Follow **PEP 8** code style
-- ✅ Add **unit tests** for new features
-- ✅ Update **documentation**
-- ✅ Commit messages in **English**
-- ✅ One feature per PR
-
----
-
-## 📞 Liên Hệ & Hỗ Trợ
-
-### Các Cách Liên Hệ
-
-| Phương Thức | Chi Tiết | Thời Gian |
-|-----------|---------|----------|
-| **Email** | le294594@gmail.com | 24-48h |
-| **GitHub Issues** | Bug reports & features | 48-72h |
-| **LinkedIn** | Direct message | 24-48h |
-| **Discord** | Coming soon | Real-time |
-
-### Ưu Tiên Hỗ Trợ
-
-- 🔴 **Critical bugs** — < 24h response
-- 🟡 **Regular issues** — 2-3 days
-- 🟢 **Questions** — Best effort
-
----
-
-
-## 🙏 Lời Cảm Ơn
-
-Cảm ơn các nhóm và công trình đã truyền cảm hứng:
-
-- 🤖 **TensorFlow/Keras team** — Framework tuyệt vời
-- 📡 **OpenCV contributors** — Video processing tools
-- 📚 **Kaggle community** — Datasets & competitions
-- 🌟 **Papers cited:**
-  - MobileNet (Howard et al., 2017)
-  - LSTM (Hochreiter & Schmidhuber, 1997)
-  - Attention Mechanism (Vaswani et al., 2017)
-
----
-
-## 📊 Thống Kê Dự Án
-
-```
-📊 PROJECT STATISTICS
-
-Code Metrics:
-├── Python Lines:           ~2,500+
-├── HTML/CSS Lines:         ~1,500+
-├── Total Files:            50+
-├── Git Commits:            100+
-└── Contributors:           5+
-
-Model Metrics:
-├── Total Parameters:       4.2M
-├── Base Model Size:        90MB
-├── Inference Speed:        150ms
-├── Memory Required:        500MB
-└── Accuracy:               90.77%
-
-Dataset:
-├── Training Videos:        4,800
-├── Validation Videos:      600
-├── Test Videos:            600
-├── Total Dataset Size:     200GB+
-└── Classes:                2 (Normal/Violence)
-
-Timeline:
-├── Development Start:      2024-01-01
-├── Initial Release:        2024-06-15
-├── Current Version:        v2.0 (2026-04-28)
-├── Active Days:            850+
-└── Last Update:            2026-04-28
-```
-
----
-
-<div align="center">
-
-### 🌟 Nếu Bạn Thích Dự Án Này, Hãy Cho Sao! ⭐
-
-[![GitHub Repo stars](https://img.shields.io/github/stars/lehoang/violence-detection-cctv?style=social)](https://github.com/lehoang/violence-detection-cctv)
-
-**Made with ❤️ by [Lê Hoàng](https://github.com/lehoang)**
-
----
-
-### 🔗 Liên Kết Nhanh
-
-[![Python](https://img.shields.io/badge/Python-3.10+-blue?logo=python&style=flat-square)](https://python.org)
-[![TensorFlow](https://img.shields.io/badge/TensorFlow-2.15+-orange?logo=tensorflow&style=flat-square)](https://tensorflow.org)
-[![Flask](https://img.shields.io/badge/Flask-Latest-green?logo=flask&style=flat-square)](https://flask.palletsprojects.com)
-[![License](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](./LICENSE)
-[![Status](https://img.shields.io/badge/Status-Active-brightgreen?style=flat-square)](#)
-
----
-
-### 📝 Citation
-
-Nếu bạn sử dụng dự án này trong nghiên cứu, vui lòng cite:
-
-```bibtex
-@software{lehoang2026violence,
-  title = {Violence Detection CCTV: Deep Learning for Real-time Surveillance},
-  author = {Lê, Hoàng},
-  year = {2026},
-  url = {https://github.com/lehoang/violence-detection-cctv},
-  note = {GitHub Repository}
-}
-```
-
----
-
-## 📝 Nhật Ký Cập Nhật (Update Logs)
-
-### [Mới Nhất] - 2026-05-02
-- **✨ Heatmap & Analytics:** Thêm trang `/dashboard` hiển thị biểu đồ nhiệt 24h và phân bổ sự cố theo từng Camera.
-- **🛡️ Privacy Mode:** Tích hợp tính năng làm mờ khuôn mặt tự động trong các đoạn video trích xuất để bảo vệ quyền riêng tư (GDPR).
-- **📹 Cải tiến Real-time:** 
-    - Chuyển sang cơ chế lưu video bằng frame-buffer (MP4) thay vì WebM để khắc phục lỗi định dạng trên Windows.
-    - Tự động quay lùi 3 giây trước sự cố và 2 giây sau sự cố.
-    - Liên kết video trực tiếp vào trang Dashboard để tải về sau.
-- **🐳 Dockerization:** Thêm `Dockerfile` và `docker-compose.yml` để triển khai hệ thống nhanh chóng.
-- **👤 Project Update:** Cập nhật bản quyền và thông tin dự án của **Lê Hoàng**.
-
----
-*Phát triển bởi: **Lê Hoàng** | [LinkedIn](https://www.linkedin.com/in/visin-8386/)*
+*Developed by: **Le Hoang***
 
 </div>
