@@ -1,0 +1,52 @@
+[
+  {
+    "id": "evt_64497279",
+    "camera_id": "webcam",
+    "timestamp": "2026-05-02T20:07:45.082227",
+    "confidence": 0.5119,
+    "violence_percentage": 0,
+    "location": "Realtime Camera"
+  },
+  {
+    "id": "evt_60536520",
+    "camera_id": "webcam",
+    "timestamp": "2026-05-02T20:08:12.812865",
+    "confidence": 0.5819,
+    "violence_percentage": 0,
+    "location": "Realtime Camera"
+  },
+  {
+    "id": "evt_2650242",
+    "camera_id": "webcam",
+    "timestamp": "2026-05-02T20:14:57.596790",
+    "confidence": 0.5056,
+    "violence_percentage": 100.0,
+    "location": "Realtime Camera"
+  },
+  {
+    "id": "evt_80274092",
+    "camera_id": "webcam",
+    "timestamp": "2026-05-02T20:22:37.468340",
+    "confidence": 0.6399,
+    "violence_percentage": 100.0,
+    "location": "Realtime Camera",
+    "video_file": "cctv_violence_evt_80274092.webm"
+  },
+  {
+    "id": "evt_74723256",
+    "camera_id": "webcam",
+    "timestamp": "2026-05-02T20:27:47.168254",
+    "confidence": 0.5101,
+    "violence_percentage": 100.0,
+    "location": "Realtime Camera"
+  },
+  {
+    "id": "evt_12556188",
+    "camera_id": "webcam",
+    "timestamp": "2026-05-02T20:27:57.407379",
+    "confidence": 0.676,
+    "violence_percentage": 100.0,
+    "location": "Realtime Camera",
+    "video_file": "cctv_violence_evt_12556188.mp4"
+  }
+]

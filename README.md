@@ -33,10 +33,12 @@ Hệ thống được thiết kế cho:
 |-----------|-------|
 | **⚡ Phát Hiện Nhanh** | Phân tích video trong 2-3 giây |
 | **🎬 Cắt Segment Thông Minh** | Tự động trích xuất các khúc bạo lực |
-| **🖥️ Web Interface** | Giao diện user-friendly drag-drop |
+| **📊 Dashboard & Heatmap** | Theo dõi xu hướng bạo lực theo thời gian/camera |
+| **🎥 Real-time Monitoring** | Giám sát trực tiếp từ Webcam/CCTV |
+| **📥 Auto Incident Export** | Tự động quay và lưu video MP4 khi có sự cố |
+| **🛡️ Privacy Masking** | Tự động làm mờ mặt (GDPR compliance) |
+| **🐳 Docker Support** | Triển khai nhanh chóng, nhất quán môi trường |
 | **🔍 Giải Thích AI** | Hiển thị điểm chú ý của model (XAI) |
-| **📊 Thống Kê Chi Tiết** | Báo cáo phân loại và metrics đầy đủ |
-| **🛡️ Bảo Mật** | Xác thực session, làm sạch dữ liệu tự động |
 
 ---
 
@@ -676,6 +678,19 @@ Nếu bạn sử dụng dự án này trong nghiên cứu, vui lòng cite:
 
 ---
 
-**Last Updated:** April 28, 2026 ✨
+## 📝 Nhật Ký Cập Nhật (Update Logs)
+
+### [Mới Nhất] - 2026-05-02
+- **✨ Heatmap & Analytics:** Thêm trang `/dashboard` hiển thị biểu đồ nhiệt 24h và phân bổ sự cố theo từng Camera.
+- **🛡️ Privacy Mode:** Tích hợp tính năng làm mờ khuôn mặt tự động trong các đoạn video trích xuất để bảo vệ quyền riêng tư (GDPR).
+- **📹 Cải tiến Real-time:** 
+    - Chuyển sang cơ chế lưu video bằng frame-buffer (MP4) thay vì WebM để khắc phục lỗi định dạng trên Windows.
+    - Tự động quay lùi 3 giây trước sự cố và 2 giây sau sự cố.
+    - Liên kết video trực tiếp vào trang Dashboard để tải về sau.
+- **🐳 Dockerization:** Thêm `Dockerfile` và `docker-compose.yml` để triển khai hệ thống nhanh chóng.
+- **👤 Project Update:** Cập nhật bản quyền và thông tin dự án của **Lê Hoàng**.
+
+---
+*Phát triển bởi: **Lê Hoàng** | [LinkedIn](https://www.linkedin.com/in/visin-8386/)*
 
 </div>
