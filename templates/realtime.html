@@ -335,6 +335,13 @@
         let frameBuffer = [];
         const BUFFER_SIZE = 15;
 
+        // Biến dùng để quay video sự cố (MediaRecorder)
+        let mediaRecorder = null;
+        let preBuffer = []; // Lưu trữ khoảng 3 giây trước sự kiện
+        let activeChunks = [];
+        let isRecordingSegment = false;
+        let stopRecordingTimeout = null;
+
         // Bật camera
         startBtn.addEventListener('click', async () => {
             try {
@@ -347,6 +354,8 @@
                 liveIndicator.style.display = 'flex';
                 isRunning = true;
                 
+                setupRecorder(stream);
+                
                 startProcessing();
                 addLog("Nguồn video đã kết nối thành công.", "normal");
                 lucide.createIcons();
@@ -355,6 +364,28 @@
                 alert("Không thể truy cập Camera. Vui lòng kiểm tra quyền truy cập.");
             }
         });
+
+        function setupRecorder(stream) {
+            try {
+                mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+            } catch (e) {
+                console.warn('WebM not supported, using default mimeType.', e);
+                mediaRecorder = new MediaRecorder(stream);
+            }
+            mediaRecorder.ondataavailable = (e) => {
+                if (e.data.size > 0) {
+                    if (isRecordingSegment) {
+                        activeChunks.push(e.data);
+                    } else {
+                        preBuffer.push(e.data);
+                        if (preBuffer.length > 3) {
+                            preBuffer.shift(); // Giữ lại 3 chunk gần nhất (~3 giây)
+                        }
+                    }
+                }
+            };
+            mediaRecorder.start(1000); // Tạo chunk mỗi 1 giây
+        }
 
         function addLog(msg, type) {
             const entry = document.createElement('div');
@@ -409,12 +440,53 @@
                 statusBox.className = "status-box status-danger";
                 masterAlert.style.display = 'block';
                 addLog(`CẢNH BÁO: Phát hiện bạo lực (${Math.round(data.confidence * 100)}%)`, "danger");
+
+                // Bắt đầu ghi hình sự cố
+                if (!isRecordingSegment) {
+                    isRecordingSegment = true;
+                    activeChunks = [...preBuffer]; // Gộp 3 giây trước đó vào
+                    addLog("Bắt đầu ghi hình sự kiện bạo lực...", "danger");
+                }
+                // Hủy hẹn giờ dừng (nếu có) do bạo lực vẫn tiếp diễn
+                if (stopRecordingTimeout) {
+                    clearTimeout(stopRecordingTimeout);
+                    stopRecordingTimeout = null;
+                }
             } else {
                 statusBox.textContent = "TRẠNG THÁI: AN TOÀN";
                 statusBox.className = "status-box status-normal";
                 masterAlert.style.display = 'none';
                 // addLog("Hệ thống: Bình thường", "normal");
+
+                // Nếu đang ghi hình mà hết bạo lực, đợi 2 giây rồi dừng
+                if (isRecordingSegment && !stopRecordingTimeout) {
+                    stopRecordingTimeout = setTimeout(() => {
+                        stopAndSaveRecording();
+                    }, 2000);
+                }
             }
+        }
+
+        function stopAndSaveRecording() {
+            isRecordingSegment = false;
+            stopRecordingTimeout = null;
+            if (activeChunks.length > 0) {
+                const blob = new Blob(activeChunks, { type: 'video/webm' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = `cctv_violence_incident_${new Date().getTime()}.webm`;
+                document.body.appendChild(a);
+                a.click();
+                setTimeout(() => {
+                    document.body.removeChild(a);
+                    window.URL.revokeObjectURL(url);
+                }, 100);
+                addLog("Đã xuất video sự kiện bạo lực (tải xuống).", "normal");
+            }
+            activeChunks = [];
+            preBuffer = []; // Reset buffer
         }
 
         // ─── Mini Heatmap ────────────────────────────────

@@ -751,6 +751,7 @@ def predict_realtime():
                 log_violence_event(
                     camera_id=camera_id,
                     confidence=confidence,
+                    violence_percentage=100.0,
                     location='Realtime Camera'
                 )
         
