@@ -136,26 +136,36 @@ Mô hình được huấn luyện trên **3 dataset thực tế** với tổng c
 
 ---
 
-## ⚡ Tối Ưu Hóa Hiệu Năng (Optimization Pipeline)
+## ⚡ Tối Ưu Hóa Hệ Thống (Technical Optimizations)
 
-Để hệ thống đạt chuẩn **Production-Ready** trên các máy chủ hạn chế tài nguyên, chúng tôi đã triển khai các kỹ thuật tối ưu hóa sau:
+Dự án đã được áp dụng các kỹ thuật **Inference Pipeline Engineering** để giải quyết bài toán cân bằng giữa độ chính xác (Accuracy), tốc độ xử lý (Latency) và khả năng mở rộng (Scalability).
 
-### 1. Tích hợp YOLOv8 (Smart Tracking)
-- Thay vì phân tích toàn bộ khung cảnh, hệ thống sử dụng **YOLOv8** để quét và khoanh vùng người (Person Detection).
-- Các khung hình được **cắt (crop)** bỏ hoàn toàn hậu cảnh thừa thãi (cây cối, đường phố) trước khi đưa vào mô hình Bạo lực.
-- 👉 **Kết quả:** Giảm triệt để tình trạng báo động giả (False Positives) do các yếu tố môi trường gây nhiễu.
+### 1. Model Compression & Acceleration (Lượng tử hóa & Tăng tốc)
+*   **Kỹ thuật:** Chuyển đổi mô hình từ Keras sang **ONNX Runtime** kết hợp với **Dynamic INT8 Quantization**.
+*   **Mục tiêu:** Giải quyết nút thắt cổ chai (Bottleneck) về tính toán trên các hệ thống không có GPU.
+*   **Kết quả:** 
+    *   Tốc độ suy luận (Inference Speed) tăng **~350%** (từ 700ms xuống <200ms trên CPU).
+    *   Tối ưu dung lượng bộ nhớ (Memory Footprint) xuống còn **3.1MB** (Giảm 10 lần so với bản gốc 30MB).
 
-### 2. Lượng Tử Hóa ONNX INT8 (Quantization)
-- Mô hình gốc được chuyển đổi từ định dạng Keras (.keras) sang chuẩn ONNX (Open Neural Network Exchange).
-- Áp dụng kỹ thuật **Dynamic Quantization** (Chuyển đổi trọng số từ Float32 sang INT8).
+### 2. Spatial-Temporal POI Tracking (Lọc nhiễu ngữ cảnh)
+*   **Kỹ thuật:** Tích hợp **YOLOv8 Nano** làm bộ tiền lọc (Pre-filter) để xác định **Person-of-Interest (POI)**.
+*   **Cơ chế:** Hệ thống sử dụng YOLOv8 để định vị con người, sau đó áp dụng **Dynamic Cropping** để chỉ đưa vùng chứa đối tượng vào mô hình nhận diện bạo lực.
+*   **Kết quả:** 
+    *   Triệt tiêu **False Positive (Báo động giả)** gây ra bởi các yếu tố ngoại cảnh (cây cối, bóng đổ, thời tiết).
+    *   Tăng độ chính xác thực tế bằng cách loại bỏ các đặc trưng nền (background noise).
 
-### 🏆 Bảng So Sánh Hiệu Suất (CPU Test)
+### 3. Buffer-based Event Reconstruction (Ghi hình sự kiện thông minh)
+*   **Kỹ thuật:** Triển khai cơ chế **Sliding Frame Buffer** (3s Pre-event & 2s Post-event).
+*   **Kết quả:** Tự động trích xuất video sự cố chuẩn MP4, bao gồm cả bối cảnh **3 giây trước khi xảy ra bạo lực**, cung cấp dữ liệu đầy đủ cho công tác giám sát và điều tra.
 
-| Chỉ số | Keras Gốc (FP32) | ONNX Lượng tử hóa (INT8) + YOLOv8 |
-|--------|------------------|-----------------------------------|
+### 🏆 Bảng So Sánh Hiệu Suất (CPU-only Benchmarks)
+
+| Chỉ số | Legacy Pipeline (Keras FP32) | Optimized Pipeline (ONNX INT8 + YOLO) |
+|--------|------------------------------|----------------------------------------|
 | **Dung lượng Mô hình** | ~30.2 MB | **3.1 MB** *(Giảm 10 lần)* |
-| **Thời gian Xử lý** | ~600 - 800 ms | **~199.17 ms** *(Tăng tốc 3-4 lần)* |
-| **Khả năng Lọc Nhiễu** | Trung bình | **Tuyệt đối** (Nhờ YOLOv8) |
+| **Inference Latency** | ~600 - 800 ms | **~199 ms** *(Tăng tốc 3.5 lần)* |
+| **False Positive Rate** | Cao (dễ nhiễu nền) | **Rất thấp** (nhờ POI Tracking) |
+| **Deployment** | Nặng, phụ thuộc nhiều lib | **Lightweight**, Dockerized |
 
 ---
 
