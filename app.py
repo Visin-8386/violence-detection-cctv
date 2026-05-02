@@ -166,17 +166,75 @@ def build_model_architecture():
 
 
 MODEL_PATH = 'models/CCTV_Violence_Finetuned.keras'
-print(f"[*] Đang khởi tạo kiến trúc và nạp trọng số từ {MODEL_PATH}...")
-model = build_model_architecture()
+ONNX_PATH = 'models/CCTV_Violence_Finetuned_int8.onnx'
 
-# Trích xuất model.weights.h5 từ file .keras (zip) rồi load trực tiếp
-with zipfile.ZipFile(MODEL_PATH, 'r') as zf:
-    with tempfile.TemporaryDirectory() as tmp_dir:
-        zf.extract('model.weights.h5', tmp_dir)
-        weights_path = os.path.join(tmp_dir, 'model.weights.h5')
-        model.load_weights(weights_path)
+try:
+    import onnxruntime as ort
+    from ultralytics import YOLO
+    print("[*] Loading YOLOv8 for person detection...")
+    yolo_model = YOLO('yolov8n.pt')
+except Exception as e:
+    print("[-] YOLO or ONNX Runtime not available:", e)
+    yolo_model = None
+    ort = None
 
-print("[+] Đã nạp mô hình thành công!")
+ort_session = None
+if os.path.exists(ONNX_PATH) and ort is not None:
+    print(f"[*] Đang nạp ONNX model từ {ONNX_PATH}...")
+    try:
+        ort_session = ort.InferenceSession(ONNX_PATH)
+        print("[+] Đã nạp ONNX model thành công!")
+        model = None
+    except Exception as e:
+        print("[-] Lỗi khi nạp ONNX model:", e)
+
+if ort_session is None:
+    print(f"[*] Đang khởi tạo kiến trúc và nạp trọng số từ {MODEL_PATH}...")
+    model = build_model_architecture()
+
+    with zipfile.ZipFile(MODEL_PATH, 'r') as zf:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            zf.extract('model.weights.h5', tmp_dir)
+            weights_path = os.path.join(tmp_dir, 'model.weights.h5')
+            model.load_weights(weights_path)
+
+    print("[+] Đã nạp mô hình Keras thành công!")
+
+def crop_person_from_frames(frames):
+    """
+    Sử dụng YOLOv8 để tìm người, lấy bounding box chung lớn nhất
+    và crop tất cả các frame. Nếu không có người, trả về None.
+    """
+    if yolo_model is None or not frames:
+        return frames
+        
+    mid_idx = len(frames) // 2
+    img = frames[mid_idx]
+    
+    results = yolo_model(img, classes=[0], verbose=False)
+    boxes = results[0].boxes.xyxy.cpu().numpy()
+    
+    if len(boxes) == 0:
+        return None
+        
+    x1 = int(np.min(boxes[:, 0]))
+    y1 = int(np.min(boxes[:, 1]))
+    x2 = int(np.max(boxes[:, 2]))
+    y2 = int(np.max(boxes[:, 3]))
+    
+    h, w = img.shape[:2]
+    margin_x = int((x2 - x1) * 0.2)
+    margin_y = int((y2 - y1) * 0.2)
+    x1 = max(0, x1 - margin_x)
+    y1 = max(0, y1 - margin_y)
+    x2 = min(w, x2 + margin_x)
+    y2 = min(h, y2 + margin_y)
+    
+    cropped_frames = []
+    for f in frames:
+        cropped_frames.append(f[y1:y2, x1:x2])
+        
+    return cropped_frames
 
 def extract_frames(video_path):
     """Trích xuất 15 khung hình từ video và tiền xử lý."""
@@ -188,17 +246,25 @@ def extract_frames(video_path):
     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     skip_frames_window = max(total_frames // FRAME_COUNT, 1)
     
+    raw_frames = []
     for i in range(FRAME_COUNT):
         cap.set(cv2.CAP_PROP_POS_FRAMES, i * skip_frames_window)
         ret, frame = cap.read()
         if not ret:
             break
-        frame = cv2.resize(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB), (IMG_SIZE, IMG_SIZE))
-        frames.append(preprocess_input(frame.astype(np.float32)))
+        raw_frames.append(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
     
     cap.release()
     
-    # Nếu thiếu khung hình thì padding bằng giá trị 0 (đã qua preprocess_input)
+    cropped = crop_person_from_frames(raw_frames)
+    if cropped is None:
+        return None # No person detected
+
+    for frame in cropped:
+        frame_resized = cv2.resize(frame, (IMG_SIZE, IMG_SIZE))
+        frames.append(preprocess_input(frame_resized.astype(np.float32)))
+    
+    # Nếu thiếu khung hình thì padding
     while len(frames) < FRAME_COUNT:
         frames.append(np.zeros((IMG_SIZE, IMG_SIZE, 3), dtype=np.float32) - 1.0)
         
@@ -260,7 +326,10 @@ def detect_violence_segments(video_path, violence_threshold=VIOLENCE_THRESHOLD):
             [processed_frames[s:s + FRAME_COUNT] for s in batch_indices],
             dtype=np.float32
         )
-        predictions = model.predict(batch_input, verbose=0)
+        if ort_session is not None:
+            predictions = ort_session.run(None, {"input": batch_input})[0]
+        else:
+            predictions = model.predict(batch_input, verbose=0)
         
         for i, start_idx in enumerate(batch_indices):
             violence_prob = float(predictions[i][1])
@@ -610,13 +679,21 @@ def predict():
         # Trích xuất frames toàn bộ video để dự đoán
         input_data = extract_frames(video_path)
         if input_data is None:
-            return jsonify({'error': 'Lỗi khi xử lý video'}), 500
-        
-        # Dự đoán toàn bộ video
-        prediction = model.predict(input_data)
-        violence_prob = float(prediction[0][1])
-        class_idx = 1 if violence_prob >= VIOLENCE_THRESHOLD else 0
-        confidence = violence_prob if class_idx == 1 else float(prediction[0][0])
+            # No person detected
+            prediction = [[1.0, 0.0]]
+            violence_prob = 0.0
+            class_idx = 0
+            confidence = 1.0
+        else:
+            # Dự đoán
+            if ort_session is not None:
+                prediction = ort_session.run(None, {"input": input_data})[0]
+            else:
+                prediction = model.predict(input_data)
+                
+            violence_prob = float(prediction[0][1])
+            class_idx = 1 if violence_prob >= VIOLENCE_THRESHOLD else 0
+            confidence = violence_prob if class_idx == 1 else float(prediction[0][0])
         
         result = {
             'class': CLASSES[class_idx],
@@ -788,39 +865,42 @@ def predict_realtime():
         if len(frames_base64) < FRAME_COUNT:
             return jsonify({'error': f'Need at least {FRAME_COUNT} frames'}), 400
         
-        processed_frames = []
+        raw_frames = []
         for b64_str in frames_base64:
-            # Giải mã base64 thành ảnh
             try:
                 header, encoded = b64_str.split(",", 1)
                 data_bytes = base64.b64decode(encoded)
                 nparr = np.frombuffer(data_bytes, np.uint8)
                 img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-                
-                if img is None:
-                    continue
-
-                # Tiền xử lý
-                img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-                img_resized = cv2.resize(img_rgb, (IMG_SIZE, IMG_SIZE))
-                processed_frames.append(preprocess_input(img_resized.astype(np.float32)))
+                if img is not None:
+                    raw_frames.append(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
             except Exception as e:
-                print(f"[-] Error processing frame: {e}")
                 continue
-        
-        if len(processed_frames) < FRAME_COUNT:
-             # Padding nếu thiếu do lỗi decode
-             while len(processed_frames) < FRAME_COUNT:
-                processed_frames.append(np.zeros((IMG_SIZE, IMG_SIZE, 3), dtype=np.float32))
+                
+        if len(raw_frames) < FRAME_COUNT:
+             while len(raw_frames) < FRAME_COUNT:
+                raw_frames.append(np.zeros((128, 128, 3), dtype=np.uint8))
+        raw_frames = raw_frames[-FRAME_COUNT:]
 
-        # Lấy 15 frames cuối cùng nếu nhiều hơn
-        processed_frames = processed_frames[-FRAME_COUNT:]
-        input_data = np.array([processed_frames], dtype=np.float32)
-        
-        # Dự đoán
-        prediction = model.predict(input_data, verbose=0)
-        class_idx = np.argmax(prediction[0])
-        confidence = float(prediction[0][class_idx])
+        cropped = crop_person_from_frames(raw_frames)
+        if cropped is None:
+            class_idx = 0
+            confidence = 1.0
+        else:
+            processed_frames = []
+            for frame in cropped:
+                frame_resized = cv2.resize(frame, (IMG_SIZE, IMG_SIZE))
+                processed_frames.append(preprocess_input(frame_resized.astype(np.float32)))
+            
+            input_data = np.array([processed_frames], dtype=np.float32)
+            
+            if ort_session is not None:
+                prediction = ort_session.run(None, {"input": input_data})[0]
+            else:
+                prediction = model.predict(input_data, verbose=0)
+                
+            class_idx = np.argmax(prediction[0])
+            confidence = float(prediction[0][class_idx])
         
         # Log event nếu phát hiện bạo lực (cooldown 10s tránh spam)
         event_id = None
