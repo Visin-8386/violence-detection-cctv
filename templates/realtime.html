@@ -316,6 +316,7 @@
     </main>
 
     <canvas id="canvas" width="128" height="128"></canvas>
+    <canvas id="hiResCanvas" width="640" height="480"></canvas>
 
     <script>
         lucide.createIcons();
@@ -323,6 +324,8 @@
         const video = document.getElementById('webcam');
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
+        const hiResCanvas = document.getElementById('hiResCanvas');
+        const hiResCtx = hiResCanvas.getContext('2d');
         const startBtn = document.getElementById('start-btn');
         const statusBox = document.getElementById('status-box');
         const logContainer = document.getElementById('log-container');
@@ -335,10 +338,10 @@
         let frameBuffer = [];
         const BUFFER_SIZE = 15;
 
-        // Biến dùng để quay video sự cố (MediaRecorder)
-        let mediaRecorder = null;
-        let preBuffer = []; // Lưu trữ khoảng 3 giây trước sự kiện
-        let activeChunks = [];
+        // Biến lưu trữ frames độ phân giải cao cho việc xuất video
+        const PRE_FRAMES = 45; // 3 giây (15 FPS)
+        let hiResBuffer = []; 
+        let activeHiRes = [];
         let isRecordingSegment = false;
         let stopRecordingTimeout = null;
         let currentEventId = null;
@@ -355,8 +358,6 @@
                 liveIndicator.style.display = 'flex';
                 isRunning = true;
                 
-                setupRecorder(stream);
-                
                 startProcessing();
                 addLog("Nguồn video đã kết nối thành công.", "normal");
                 lucide.createIcons();
@@ -365,28 +366,6 @@
                 alert("Không thể truy cập Camera. Vui lòng kiểm tra quyền truy cập.");
             }
         });
-
-        function setupRecorder(stream) {
-            try {
-                mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
-            } catch (e) {
-                console.warn('WebM not supported, using default mimeType.', e);
-                mediaRecorder = new MediaRecorder(stream);
-            }
-            mediaRecorder.ondataavailable = (e) => {
-                if (e.data.size > 0) {
-                    if (isRecordingSegment) {
-                        activeChunks.push(e.data);
-                    } else {
-                        preBuffer.push(e.data);
-                        if (preBuffer.length > 3) {
-                            preBuffer.shift(); // Giữ lại 3 chunk gần nhất (~3 giây)
-                        }
-                    }
-                }
-            };
-            mediaRecorder.start(1000); // Tạo chunk mỗi 1 giây
-        }
 
         function addLog(msg, type) {
             const entry = document.createElement('div');
@@ -401,10 +380,23 @@
             setInterval(() => {
                 if (!isRunning) return;
                 
-                // Capture frame hiện tại
+                // Dành cho phân tích (nhỏ)
                 ctx.drawImage(video, 0, 0, 128, 128);
                 const frameData = canvas.toDataURL('image/jpeg', 0.6);
                 frameBuffer.push(frameData);
+
+                // Dành cho lưu video sự cố (lớn hơn)
+                hiResCtx.drawImage(video, 0, 0, 640, 480);
+                const hiResData = hiResCanvas.toDataURL('image/jpeg', 0.7);
+
+                if (isRecordingSegment) {
+                    activeHiRes.push(hiResData);
+                } else {
+                    hiResBuffer.push(hiResData);
+                    if (hiResBuffer.length > PRE_FRAMES) {
+                        hiResBuffer.shift();
+                    }
+                }
                 
                 // Nếu đủ buffer 15 frames, gửi đi phân tích
                 if (frameBuffer.length >= BUFFER_SIZE) {
@@ -449,7 +441,7 @@
                 // Bắt đầu ghi hình sự cố
                 if (!isRecordingSegment) {
                     isRecordingSegment = true;
-                    activeChunks = [...preBuffer]; // Gộp 3 giây trước đó vào
+                    activeHiRes = [...hiResBuffer]; // Lấy 3 giây trước sự cố
                     addLog("Bắt đầu ghi hình sự kiện bạo lực...", "danger");
                 }
                 // Hủy hẹn giờ dừng (nếu có) do bạo lực vẫn tiếp diễn
@@ -475,21 +467,22 @@
         async function stopAndSaveRecording() {
             isRecordingSegment = false;
             stopRecordingTimeout = null;
-            if (activeChunks.length > 0 && currentEventId) {
-                const blob = new Blob(activeChunks, { type: 'video/webm' });
-                
-                const formData = new FormData();
-                formData.append('video', blob, 'video.webm');
-                formData.append('event_id', currentEventId);
+            if (activeHiRes.length > 0 && currentEventId) {
+                const payload = {
+                    event_id: currentEventId,
+                    frames: activeHiRes,
+                    fps: 15
+                };
 
                 try {
                     addLog("Đang lưu video sự cố lên máy chủ...", "normal");
-                    const res = await fetch('/api/events/upload_video', {
+                    const res = await fetch('/api/events/upload_frames', {
                         method: 'POST',
-                        body: formData
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
                     });
                     if (res.ok) {
-                        addLog("Đã lưu video trên Dashboard thành công.", "normal");
+                        addLog("Đã lưu video (.mp4) trên Dashboard thành công.", "normal");
                     } else {
                         addLog("Lỗi khi lưu video.", "danger");
                     }
@@ -498,8 +491,8 @@
                     addLog("Lỗi kết nối khi lưu video.", "danger");
                 }
             }
-            activeChunks = [];
-            preBuffer = []; // Reset buffer
+            activeHiRes = [];
+            hiResBuffer = []; // Reset buffer
             currentEventId = null;
         }
 

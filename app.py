@@ -512,6 +512,62 @@ def clear_events():
         _save_events([])
     return jsonify({'status': 'success', 'message': 'Đã xóa lịch sử'})
 
+@app.route('/api/events/upload_frames', methods=['POST'])
+def upload_event_frames():
+    """Nhận base64 frames từ client và chuyển thành file MP4 chuẩn."""
+    data = request.get_json()
+    if not data or 'frames' not in data or 'event_id' not in data:
+        return jsonify({'error': 'Invalid payload'}), 400
+        
+    event_id = data['event_id']
+    frames_b64 = data['frames']
+    fps = data.get('fps', 15)
+    
+    if not frames_b64:
+        return jsonify({'error': 'No frames'}), 400
+        
+    filename = f"cctv_violence_{event_id}.mp4"
+    filepath = os.path.join(app.config['OUTPUT_FOLDER'], filename)
+    
+    try:
+        # Lấy kích thước từ frame đầu tiên
+        header, encoded = frames_b64[0].split(",", 1)
+        data_bytes = base64.b64decode(encoded)
+        nparr = np.frombuffer(data_bytes, np.uint8)
+        first_frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        height, width = first_frame.shape[:2]
+        
+        # mp4v là codec phổ biến, dễ tương thích
+        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+        out = cv2.VideoWriter(filepath, fourcc, fps, (width, height))
+        
+        for b64_str in frames_b64:
+            try:
+                h, enc = b64_str.split(",", 1)
+                b = base64.b64decode(enc)
+                np_arr = np.frombuffer(b, np.uint8)
+                frame = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+                if frame is not None:
+                    out.write(frame)
+            except Exception:
+                continue
+                
+        out.release()
+        
+        # Cập nhật sự kiện trong json
+        with _events_lock:
+            events = _load_events()
+            for e in events:
+                if e['id'] == event_id:
+                    e['video_file'] = filename
+                    break
+            _save_events(events)
+            
+        return jsonify({'status': 'success', 'filename': filename})
+    except Exception as e:
+        print("Error saving frames to mp4:", e)
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/api/events/upload_video', methods=['POST'])
 def upload_event_video():
     """Nhận video do client tự quay và gán vào sự kiện."""
