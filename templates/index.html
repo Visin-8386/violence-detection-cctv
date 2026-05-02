@@ -314,6 +314,14 @@
     <header>
         <h1>Violence Detection CCTV</h1>
         <p>Hệ thống AI nhận diện hành vi bạo lực thời gian thực</p>
+        <div style="margin-top: 1.5rem; display: flex; justify-content: center; gap: 1rem;">
+            <a href="/" class="status-badge status-success" style="text-decoration: none; border: 1px solid var(--primary); color: var(--primary); padding: 0.5rem 1rem; border-radius: 9999px; font-weight: 600; font-size: 0.75rem;">
+                <i data-lucide="upload" style="width: 14px; height: 14px; margin-right: 4px; vertical-align: middle;"></i> PHÂN TÍCH VIDEO
+            </a>
+            <a href="/realtime" class="status-badge status-idle" style="text-decoration: none; padding: 0.5rem 1rem; border-radius: 9999px; font-weight: 600; font-size: 0.75rem;">
+                <i data-lucide="zap" style="width: 14px; height: 14px; margin-right: 4px; vertical-align: middle;"></i> GIÁM SÁT REAL-TIME
+            </a>
+        </div>
     </header>
 
     <main class="container">
@@ -394,11 +402,7 @@
 
                         <!-- Video Player (Hidden by default) -->
                         <div id="segment-video-container" class="hidden">
-                            <video id="violence-video" class="segment-video" controls></video>
-                            <button class="btn download-btn" id="download-btn" style="width: 100%;">
-                                <i data-lucide="download"></i>
-                                TẢI XUỐNG VIDEO
-                            </button>
+                            <div id="segment-videos-list" style="display: flex; flex-direction: column; gap: 1.5rem;"></div>
                         </div>
 
                         <!-- Loading indicator -->
@@ -414,7 +418,7 @@
     </main>
 
     <footer>
-        &copy; 2026 Violence Detection System &bull; Nguyễn Trần &bull; AI Research
+        &copy; 2026 Violence Detection System &bull; Lê Hoàng &bull; AI Research
     </footer>
 
     <script>
@@ -434,12 +438,11 @@
         const confidenceValue = document.getElementById('confidence-value');
         const confidenceBar = document.getElementById('confidence-bar');
         const violenceSegmentSection = document.getElementById('violence-segment-section');
-        const violenceVideo = document.getElementById('violence-video');
+        const segmentVideosList = document.getElementById('segment-videos-list');
         const violenceFramesSpan = document.getElementById('violence-frames');
         const totalFramesSpan = document.getElementById('total-frames');
         const violencePercentageSpan = document.getElementById('violence-percentage');
         const generateSegmentBtn = document.getElementById('generate-segment-btn');
-        const downloadBtn = document.getElementById('download-btn');
         const segmentStats = document.getElementById('segment-stats');
         const segmentVideoContainer = document.getElementById('segment-video-container');
         const segmentLoader = document.getElementById('segment-loader');
@@ -603,20 +606,50 @@
                     violencePercentageSpan.textContent = (data.violence_percentage || 0).toFixed(1) + '%';
                     segmentStats.classList.remove('hidden');
 
-                    // Hiển thị video
-                    if (data.violence_segment_video) {
-                        violenceVideo.src = data.violence_segment_video;
+                    // Hiển thị tất cả videos
+                    if (data.violence_segment_videos && data.violence_segment_videos.length > 0) {
+                        segmentVideosList.innerHTML = ''; // Xóa videos cũ
+                        
+                        data.violence_segment_videos.forEach((videoUrl, index) => {
+                            // Tạo container cho mỗi video
+                            const videoContainer = document.createElement('div');
+                            videoContainer.style.cssText = 'display: flex; flex-direction: column; gap: 0.75rem; padding: 1rem; background: rgba(15, 23, 42, 0.8); border-radius: 0.75rem; border: 1px solid rgba(255, 255, 255, 0.1);';
+                            
+                            // Tạo tiêu đề
+                            const title = document.createElement('h4');
+                            title.textContent = `Segment ${index + 1}`;
+                            title.style.cssText = 'margin: 0; color: var(--text); font-size: 0.95rem;';
+                            
+                            // Tạo video player
+                            const video = document.createElement('video');
+                            video.src = videoUrl;
+                            video.controls = true;
+                            video.className = 'segment-video';
+                            video.style.cssText = 'width: 100%; border-radius: 0.5rem; background: #000;';
+                            
+                            // Tạo download button
+                            const downloadBtn = document.createElement('button');
+                            downloadBtn.className = 'btn';
+                            downloadBtn.style.cssText = 'width: 100%;';
+                            downloadBtn.innerHTML = '<i data-lucide="download" style="width: 18px; height: 18px;"></i> TẢI XUỐNG SEGMENT ' + (index + 1);
+                            downloadBtn.onclick = () => {
+                                const link = document.createElement('a');
+                                link.href = videoUrl;
+                                link.download = `violence_segment_${index + 1}.mp4`;
+                                document.body.appendChild(link);
+                                link.click();
+                                document.body.removeChild(link);
+                            };
+                            
+                            videoContainer.appendChild(title);
+                            videoContainer.appendChild(video);
+                            videoContainer.appendChild(downloadBtn);
+                            segmentVideosList.appendChild(videoContainer);
+                        });
+                        
+                        // Cập nhật Lucide icons
+                        lucide.createIcons();
                         segmentVideoContainer.classList.remove('hidden');
-
-                        // Download button handler
-                        downloadBtn.onclick = () => {
-                            const link = document.createElement('a');
-                            link.href = data.violence_segment_video;
-                            link.download = 'violence_segment.mp4';
-                            document.body.appendChild(link);
-                            link.click();
-                            document.body.removeChild(link);
-                        };
                     }
                 } else {
                     alert('Lỗi: ' + data.error);

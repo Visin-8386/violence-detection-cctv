@@ -10,7 +10,8 @@ from tensorflow.keras.models import Model
 from tensorflow.keras.applications import MobileNetV2
 from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
 import tensorflow.keras.backend as K
-from scipy.ndimage import binary_dilation
+import base64
+
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'uploads'
@@ -22,6 +23,9 @@ os.makedirs(app.config['OUTPUT_FOLDER'], exist_ok=True)
 IMG_SIZE = 128
 FRAME_COUNT = 15
 CLASSES = ['Normal', 'Violence']
+VIOLENCE_THRESHOLD = 0.3
+SEGMENT_PRE_SECONDS = 2.0
+SEGMENT_POST_SECONDS = 0.0
 
 # Lưu trữ dữ liệu nhận diện tạm thời
 detection_cache = {}
@@ -132,81 +136,163 @@ def extract_frames(video_path):
         
     return np.array([frames], dtype=np.float32)
 
-def detect_violence_segments(video_path, violence_threshold=0.5, buffer_frames=15):
+def build_window_start_indices(total_frames, window_size, stride):
+    """Build sliding-window start indices and always include the final window."""
+    if total_frames < window_size:
+        return []
+
+    last_start = total_frames - window_size
+    start_indices = list(range(0, last_start + 1, stride))
+    if start_indices[-1] != last_start:
+        start_indices.append(last_start)
+
+    return start_indices
+
+def detect_violence_segments(video_path, violence_threshold=VIOLENCE_THRESHOLD):
     """
-    Phát hiện các segment bạo lực trong video bằng sliding window.
-    Trả về: tuple (violence_frames_array, fps, width, height, total_frames)
+    Phát hiện các segment bạo lực trong video bằng sliding window + batch predict.
+    Trả về: tuple (violence_binary, fps, width, height, total_frames)
     """
     cap = cv2.VideoCapture(video_path)
     if not cap.isOpened():
-        return None
+        return None, 0, 0, 0, 0
     
     fps = cap.get(cv2.CAP_PROP_FPS)
     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     
-    # Đọc tất cả frames
-    all_frames_list = []
+    # Đọc và tiền xử lý frames ngay (chỉ lưu bản 128x128 → tiết kiệm ~100x RAM)
+    processed_frames = []
     while True:
         ret, frame = cap.read()
         if not ret:
             break
-        all_frames_list.append(frame)
+        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        frame_resized = cv2.resize(frame_rgb, (IMG_SIZE, IMG_SIZE))
+        frame_processed = preprocess_input(frame_resized.astype(np.float32))
+        processed_frames.append(frame_processed)
     cap.release()
     
-    if len(all_frames_list) < FRAME_COUNT:
+    actual_total = len(processed_frames)
+    if actual_total < FRAME_COUNT:
         return None, fps, width, height, total_frames
     
-    # Dùng sliding window để phát hiện bạo lực cho từng frame
-    violence_scores = []  # score bạo lực cho mỗi frame
-    
-    # Stride = 5 frames để tăng tốc độ xử lý
-    stride = max(1, len(all_frames_list) // 100)  # tối đa ~100 windows
-    
-    for start_idx in range(0, len(all_frames_list) - FRAME_COUNT + 1, stride):
-        window_frames = []
-        for frame_idx in range(start_idx, start_idx + FRAME_COUNT):
-            frame = all_frames_list[frame_idx]
-            frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            frame_resized = cv2.resize(frame_rgb, (IMG_SIZE, IMG_SIZE))
-            frame_processed = preprocess_input(frame_resized.astype(np.float32))
-            window_frames.append(frame_processed)
+    # Sliding window: stride = 50% overlap — đủ chính xác mà không quá chậm
+    stride = max(FRAME_COUNT // 2, 1)
+    window_starts = build_window_start_indices(actual_total, FRAME_COUNT, stride)
+    violence_score_sums = np.zeros(actual_total, dtype=np.float32)
+    violence_score_counts = np.zeros(actual_total, dtype=np.int32)
+
+    # Batch predict: gom nhiều windows vào 1 lần predict thay vì từng cái
+    BATCH_SIZE = 16
+    for batch_start in range(0, len(window_starts), BATCH_SIZE):
+        batch_indices = window_starts[batch_start:batch_start + BATCH_SIZE]
+        batch_input = np.array(
+            [processed_frames[s:s + FRAME_COUNT] for s in batch_indices],
+            dtype=np.float32
+        )
+        predictions = model.predict(batch_input, verbose=0)
         
-        # Dự đoán
-        input_data = np.array([window_frames], dtype=np.float32)
-        prediction = model.predict(input_data, verbose=0)
-        violence_prob = prediction[0][1]  # Xác suất bạo lực
-        
-        # Map window prediction về tất cả frames trong window
-        for offset in range(FRAME_COUNT):
-            frame_idx = start_idx + offset
-            violence_scores.append(violence_prob)
+        for i, start_idx in enumerate(batch_indices):
+            violence_prob = float(predictions[i][1])
+            window_end = start_idx + FRAME_COUNT
+            violence_score_sums[start_idx:window_end] += violence_prob
+            violence_score_counts[start_idx:window_end] += 1
     
-    # Pad lại để có đủ scores cho tất cả frames
-    while len(violence_scores) < len(all_frames_list):
-        violence_scores.append(0.0)
+    # Giải phóng RAM
+    del processed_frames
     
-    violence_scores = violence_scores[:len(all_frames_list)]
+    # Lấy điểm trung bình trên mỗi frame từ các window chồng lấp.
+    violence_scores = np.divide(
+        violence_score_sums,
+        violence_score_counts,
+        out=np.zeros_like(violence_score_sums),
+        where=violence_score_counts > 0
+    )
+
+    print(f"[DEBUG] detect_violence_segments: windows={len(window_starts)}, stride={stride}, batch_size={BATCH_SIZE}")
+    print(f"[DEBUG] total_frames={actual_total}, fps={fps}")
     
-    # Xác định frames bạo lực (> ngưỡng) và dilate để mở rộng vùng
-    violence_binary = np.array([1 if score > violence_threshold else 0 for score in violence_scores])
-    
-    # Dilate để mở rộng vùng bạo lực (thêm buffer frames)
-    dilation_size = buffer_frames // 2
-    if dilation_size > 0:
-        kernel = np.ones(dilation_size)
-        violence_binary = binary_dilation(violence_binary, structure=kernel).astype(int)
+    # Xác định frames bạo lực (> ngưỡng) — KHÔNG dilation để giữ đúng vùng phát hiện
+    violence_binary = (violence_scores > violence_threshold).astype(int)
+
+    # Log stats
+    try:
+        intervals = get_violence_intervals(violence_binary)
+        print(f"[DEBUG] violence_frame_count={int(np.sum(violence_binary))}")
+        print(f"[DEBUG] intervals={intervals}")
+    except Exception:
+        pass
     
     return violence_binary, fps, width, height, total_frames
+
+
+def get_violence_intervals(violence_binary):
+    """Trả về danh sách (start, end) cho các cụm frame bạo lực liên tiếp."""
+    intervals = []
+    in_segment = False
+    segment_start = 0
+
+    for idx, value in enumerate(violence_binary):
+        if value and not in_segment:
+            in_segment = True
+            segment_start = idx
+        elif not value and in_segment:
+            intervals.append((segment_start, idx - 1))
+            in_segment = False
+
+    if in_segment:
+        intervals.append((segment_start, len(violence_binary) - 1))
+
+    return intervals
+
+
+def expand_violence_windows(violence_binary, fps, pre_seconds=SEGMENT_PRE_SECONDS, post_seconds=SEGMENT_POST_SECONDS):
+    """Mở rộng vùng bạo lực để lấy thêm thời gian trước/sau mỗi đoạn."""
+    if violence_binary is None or len(violence_binary) == 0:
+        return violence_binary
+
+    pre_frames = int(round(fps * pre_seconds)) if fps else 0
+    post_frames = int(round(fps * post_seconds)) if fps else 0
+    expanded = np.zeros_like(violence_binary, dtype=int)
+
+    in_segment = False
+    segment_start = 0
+
+    for idx, is_violence in enumerate(violence_binary):
+        if is_violence and not in_segment:
+            in_segment = True
+            segment_start = idx
+        elif not is_violence and in_segment:
+            in_segment = False
+            segment_end = idx - 1
+            start = max(0, segment_start - pre_frames)
+            end = min(len(violence_binary) - 1, segment_end + post_frames)
+            expanded[start:end + 1] = 1
+
+    if in_segment:
+        segment_end = len(violence_binary) - 1
+        start = max(0, segment_start - pre_frames)
+        end = min(len(violence_binary) - 1, segment_end + post_frames)
+        expanded[start:end + 1] = 1
+
+    return expanded
 
 def create_violence_segment_video(video_path, violence_binary, fps, width, height, output_path):
     """
     Tạo video chỉ chứa các segment bạo lực.
     """
+    violence_binary = expand_violence_windows(violence_binary, fps)
+
     cap = cv2.VideoCapture(video_path)
-    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    # Thử codec H.264 (tương thích trình duyệt), fallback sang mp4v
+    fourcc = cv2.VideoWriter_fourcc(*'avc1')
     out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
+    if not out.isOpened():
+        out.release()
+        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+        out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
     
     frame_idx = 0
     violence_segment_count = 0
@@ -227,9 +313,71 @@ def create_violence_segment_video(video_path, violence_binary, fps, width, heigh
     
     return violence_segment_count > 0, violence_segment_count
 
+
+def create_violence_segment_videos(video_path, violence_binary, fps, width, height, output_prefix):
+    """Tạo riêng từng video cho mỗi cụm bạo lực."""
+    if violence_binary is None:
+        return []
+
+    raw_intervals = get_violence_intervals(violence_binary)
+    if not raw_intervals:
+        return []
+
+    # Expand chỉ từ raw binary (KHÔNG qua dilation) → đúng 2s trước
+    expanded_binary = expand_violence_windows(violence_binary, fps)
+
+    total_frames = len(violence_binary)
+    pre_frames = int(round(fps * SEGMENT_PRE_SECONDS)) if fps else 0
+    post_frames = int(round(fps * SEGMENT_POST_SECONDS)) if fps else 0
+    intervals = get_violence_intervals(expanded_binary)
+    output_files = []
+    
+    print(f"[DEBUG] create_violence_segment_videos:")
+    print(f"  Total frames: {total_frames}, FPS: {fps}")
+    print(f"  Pre-frames: {pre_frames} ({SEGMENT_PRE_SECONDS}s), Post-frames: {post_frames} ({SEGMENT_POST_SECONDS}s)")
+    print(f"  Raw intervals: {raw_intervals}")
+    print(f"  Expanded intervals: {intervals}")
+
+    for index, (start_frame, end_frame) in enumerate(intervals, start=1):
+        output_filename = f"{output_prefix}_{index}.mp4"
+        output_path = os.path.join(app.config['OUTPUT_FOLDER'], output_filename)
+        
+        print(f"  Segment {index}: [{start_frame}, {end_frame}] ({(end_frame-start_frame+1)/fps:.2f}s)")
+
+        cap = cv2.VideoCapture(video_path)
+        # Thử codec H.264 (tương thích trình duyệt), fallback sang mp4v
+        fourcc = cv2.VideoWriter_fourcc(*'avc1')
+        out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
+        if not out.isOpened():
+            out.release()
+            fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+            out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
+
+        # Seek trực tiếp tới start_frame thay vì đọc từ frame 0
+        cap.set(cv2.CAP_PROP_POS_FRAMES, start_frame)
+        frames_written = 0
+        for _ in range(end_frame - start_frame + 1):
+            ret, frame = cap.read()
+            if not ret:
+                break
+            out.write(frame)
+            frames_written += 1
+
+        cap.release()
+        out.release()
+        output_files.append(output_filename)
+        
+        print(f"    Output: {output_filename} ({frames_written} frames)")
+
+    return output_files
+
 @app.route('/')
 def index():
     return render_template('index.html')
+
+@app.route('/realtime')
+def realtime():
+    return render_template('realtime.html')
 
 @app.route('/predict', methods=['POST'])
 def predict():
@@ -251,13 +399,16 @@ def predict():
         
         # Dự đoán toàn bộ video
         prediction = model.predict(input_data)
-        class_idx = np.argmax(prediction[0])
-        confidence = float(prediction[0][class_idx])
+        violence_prob = float(prediction[0][1])
+        class_idx = 1 if violence_prob >= VIOLENCE_THRESHOLD else 0
+        confidence = violence_prob if class_idx == 1 else float(prediction[0][0])
         
         result = {
             'class': CLASSES[class_idx],
             'confidence': confidence,
             'prediction': prediction[0].tolist(),
+            'violence_probability': violence_prob,
+            'threshold': VIOLENCE_THRESHOLD,
             'status': 'success',
             'session_id': None,
             'can_create_segment': False
@@ -267,15 +418,14 @@ def predict():
         if class_idx == 1:  # Violence detected
             violence_binary, fps, width, height, total_frames = detect_violence_segments(
                 video_path, 
-                violence_threshold=0.5,
-                buffer_frames=15
+                violence_threshold=VIOLENCE_THRESHOLD
             )
             
             if violence_binary is not None:
                 # Tạo session_id để lưu dữ liệu
                 session_id = f"session_{int(np.random.random() * 1000000)}"
                 
-                # Lưu dữ liệu vào cache
+                # Lưu dữ liệu vào cache (chỉ raw binary, expand khi cắt video)
                 detection_cache[session_id] = {
                     'video_path': video_path,
                     'violence_binary': violence_binary,
@@ -318,29 +468,33 @@ def create_segment():
         height = cached_data['height']
         total_frames = cached_data['total_frames']
         
-        # Tạo video segment
-        output_filename = f"violence_segment_{int(np.random.random() * 10000)}.mp4"
-        output_path = os.path.join(app.config['OUTPUT_FOLDER'], output_filename)
-        
-        has_violence, frame_count = create_violence_segment_video(
-            video_path, 
-            violence_binary, 
-            fps, 
-            width, 
-            height, 
-            output_path
+        # Tạo từng video riêng cho mỗi cụm bạo lực
+        output_prefix = f"violence_segment_{int(np.random.random() * 10000)}"
+        output_files = create_violence_segment_videos(
+            video_path,
+            violence_binary,
+            fps,
+            width,
+            height,
+            output_prefix,
         )
+
+        total_written_frames = 0
+        for output_filename in output_files:
+            output_path = os.path.join(app.config['OUTPUT_FOLDER'], output_filename)
+            if os.path.exists(output_path):
+                cap_check = cv2.VideoCapture(output_path)
+                total_written_frames += int(cap_check.get(cv2.CAP_PROP_FRAME_COUNT))
+                cap_check.release()
         
         result = {
             'status': 'success',
-            'violence_segment_video': None,
-            'violence_frames': int(frame_count),
+            'violence_segment_video': f'/download/{output_files[0]}' if output_files else None,
+            'violence_segment_videos': [f'/download/{filename}' for filename in output_files],
+            'violence_frames': int(total_written_frames),
             'total_frames': int(total_frames),
-            'violence_percentage': float((frame_count / total_frames * 100) if total_frames > 0 else 0)
+            'violence_percentage': float((total_written_frames / total_frames * 100) if total_frames > 0 else 0)
         }
-        
-        if has_violence and os.path.exists(output_path):
-            result['violence_segment_video'] = f'/download/{output_filename}'
         
         # Xóa file input sau khi tạo video
         if os.path.exists(video_path):
@@ -362,6 +516,62 @@ def download_file(filename):
             return send_file(file_path, mimetype='video/mp4', as_attachment=True)
         return jsonify({'error': 'File không tồn tại'}), 404
     except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/predict_realtime', methods=['POST'])
+def predict_realtime():
+    """Nhận diện bạo lực từ stream frames gửi lên từ client."""
+    try:
+        data = request.get_json()
+        if not data or 'frames' not in data:
+            return jsonify({'error': 'No frames provided'}), 400
+        
+        frames_base64 = data['frames']
+        if len(frames_base64) < FRAME_COUNT:
+            return jsonify({'error': f'Need at least {FRAME_COUNT} frames'}), 400
+        
+        processed_frames = []
+        for b64_str in frames_base64:
+            # Giải mã base64 thành ảnh
+            try:
+                header, encoded = b64_str.split(",", 1)
+                data_bytes = base64.b64decode(encoded)
+                nparr = np.frombuffer(data_bytes, np.uint8)
+                img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+                
+                if img is None:
+                    continue
+
+                # Tiền xử lý
+                img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+                img_resized = cv2.resize(img_rgb, (IMG_SIZE, IMG_SIZE))
+                processed_frames.append(preprocess_input(img_resized.astype(np.float32)))
+            except Exception as e:
+                print(f"[-] Error processing frame: {e}")
+                continue
+        
+        if len(processed_frames) < FRAME_COUNT:
+             # Padding nếu thiếu do lỗi decode
+             while len(processed_frames) < FRAME_COUNT:
+                processed_frames.append(np.zeros((IMG_SIZE, IMG_SIZE, 3), dtype=np.float32))
+
+        # Lấy 15 frames cuối cùng nếu nhiều hơn
+        processed_frames = processed_frames[-FRAME_COUNT:]
+        input_data = np.array([processed_frames], dtype=np.float32)
+        
+        # Dự đoán
+        prediction = model.predict(input_data, verbose=0)
+        class_idx = np.argmax(prediction[0])
+        confidence = float(prediction[0][class_idx])
+        
+        return jsonify({
+            'class': CLASSES[class_idx],
+            'confidence': confidence,
+            'status': 'success'
+        })
+        
+    except Exception as e:
+        print(f"[-] Error in predict_realtime: {e}")
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
