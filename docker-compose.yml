@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  cctv-app:
+    build: .
+    container_name: violence-cctv
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./data:/app/data
+      - ./outputs:/app/outputs
+      - ./uploads:/app/uploads
+    restart: unless-stopped
+    environment:
+      - FLASK_ENV=production

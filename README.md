@@ -166,6 +166,25 @@ Output sẽ hiển thị:
 #### Bước 3: Mở Trình Duyệt
 Truy cập: **http://127.0.0.1:5000**
 
+---
+
+### 🐳 Option 1B: Chạy bằng Docker (Khuyên Dùng)
+
+Việc chạy bằng Docker giúp tránh các lỗi cài đặt liên quan đến phiên bản thư viện hoặc OpenCV trên các hệ điều hành khác nhau.
+
+#### Bước 1: Build và chạy bằng Docker Compose
+```bash
+docker-compose up --build -d
+```
+
+#### Bước 2: Xem Logs (Tùy chọn)
+```bash
+docker logs -f violence-cctv
+```
+
+#### Bước 3: Mở Trình Duyệt
+Truy cập: **http://127.0.0.1:5000**
+
 #### 🖥️ Sử Dụng Web Interface
 
 1. **Tải Video**
