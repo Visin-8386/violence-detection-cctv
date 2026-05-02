@@ -1,9 +1,8 @@
 output_results/
 __pycache__/
 *.pyc
-*.keras
 *.h5
 uploads/
 outputs/
-data/
 *.mp4
+!data/**/*.mp4
