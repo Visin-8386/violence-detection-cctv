@@ -444,7 +444,7 @@ Thông tin tác giả được giản lược cho mục đích minh bạch. Nế
 
 - **Tên:** Lê Hoàng
 - **Email:** le294594@gmail.com
-- **GitHub:** https://github.com/lehoang
+- **GitHub:** https://github.com/Visin-8386
 
 ---
 
