@@ -48,5 +48,13 @@
     "violence_percentage": 100.0,
     "location": "Realtime Camera",
     "video_file": "cctv_violence_evt_12556188.mp4"
+  },
+  {
+    "id": "evt_6569179",
+    "camera_id": "upload",
+    "timestamp": "2026-05-02T23:11:34.930763",
+    "confidence": 0.3132,
+    "violence_percentage": 82.73,
+    "location": "Upload"
   }
 ]

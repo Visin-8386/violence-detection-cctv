@@ -4,7 +4,8 @@ import numpy as np
 import time
 import onnxruntime as ort
 from ultralytics import YOLO
-from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
+import tensorflow as tf
+preprocess_input = tf.keras.applications.mobilenet_v2.preprocess_input
 
 IMG_SIZE = 128
 FRAME_COUNT = 15

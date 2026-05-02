@@ -8,11 +8,18 @@ import threading
 from datetime import datetime
 import tensorflow as tf
 from flask import Flask, render_template, request, jsonify, send_file
-from tensorflow.keras.layers import Layer, Input, GlobalAveragePooling2D, Bidirectional, LSTM, Dense, Dropout
-from tensorflow.keras.models import Model
-from tensorflow.keras.applications import MobileNetV2
-from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
-import tensorflow.keras.backend as K
+# Keras components assigned directly from tf.keras to resolve IDE 'module not found' issues
+Layer = tf.keras.layers.Layer
+Input = tf.keras.layers.Input
+GlobalAveragePooling2D = tf.keras.layers.GlobalAveragePooling2D
+Bidirectional = tf.keras.layers.Bidirectional
+LSTM = tf.keras.layers.LSTM
+Dense = tf.keras.layers.Dense
+Dropout = tf.keras.layers.Dropout
+Model = tf.keras.models.Model
+MobileNetV2 = tf.keras.applications.MobileNetV2
+preprocess_input = tf.keras.applications.mobilenet_v2.preprocess_input
+K = tf.keras.backend
 import base64
 
 

@@ -2,10 +2,17 @@ import os
 import zipfile
 import tempfile
 import tensorflow as tf
-from tensorflow.keras.layers import Layer, Input, GlobalAveragePooling2D, Bidirectional, LSTM, Dense, Dropout
-from tensorflow.keras.applications import MobileNetV2
-from tensorflow.keras.models import Model
-import tensorflow.keras.backend as K
+# Direct Keras access for IDE compatibility
+Layer = tf.keras.layers.Layer
+Input = tf.keras.layers.Input
+GlobalAveragePooling2D = tf.keras.layers.GlobalAveragePooling2D
+Bidirectional = tf.keras.layers.Bidirectional
+LSTM = tf.keras.layers.LSTM
+Dense = tf.keras.layers.Dense
+Dropout = tf.keras.layers.Dropout
+MobileNetV2 = tf.keras.applications.MobileNetV2
+Model = tf.keras.models.Model
+K = tf.keras.backend
 import tf2onnx
 from onnxruntime.quantization import quantize_dynamic, QuantType
 
