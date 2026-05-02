@@ -219,54 +219,47 @@ Kết quả sẽ lưu trong:
 📦 violence-detection-cctv/
 │
 ├── 🌐 WEB APPLICATION (PRODUCTION)
-│   ├── app.py                       # Flask backend (368 lines)
-│   │   ├── /predict endpoint        # Phát hiện bạo lực
-│   │   ├── /create-segment endpoint # Tạo segment video
-│   │   └── /download endpoint       # Tải video
-│   │
-│   └── templates/
-│       ├── index.html               # Giao diện chính (634 lines)
-│       └── realtime.html            # Giao diện realtime (386 lines)
+│   ├── app.py                       # Main Flask entry point
+│   ├── templates/                   # UI templates
+│   └── static/                      # CSS/JS assets (if any)
 │
-├── 🤖 ML MODELS
-│   └── models/
-│       ├── CCTV_Violence_Finetuned.keras  # ⭐ Model chính (dùng)
-│       ├── CCTV_Violence_Final.keras
-│       └── CCTV_Violence_Attention.keras
+├── 📂 CORE MODULES
+│   ├── scripts/
+│   │   └── app_realtime.py          # Real-time monitoring version
+│   └── models/                      # Pre-trained .keras models
 │
-├── 📊 TRAINING & NOTEBOOKS
-│   ├── v8_chay.ipynb                # Notebook huấn luyện chính
-│   └── eval_only.ipynb              # Notebook đánh giá mô hình
+├── 🧪 TESTING & BENCHMARKS
+│   └── tests/
+│       ├── benchmark_test.py        # Performance testing
+│       ├── test_api_direct.py       # API testing
+│       ├── test_multi_video_fix.py  # Multi-segment fix verification
+│       └── verify_segment_logic.py  # Logic verification
 │
-├── 📈 OUTPUT RESULTS (Sinh sau training)
-│   ├── charts/
-│   │   ├── 00_sanity_check.png      # Kiểm tra dữ liệu
-│   │   ├── 01_learning_curves.png   # Training curves
-│   │   ├── 02_evaluation_charts.png # Confusion matrix
-│   │   └── 03_xai_*.png             # Temporal Attention visualization
-│   │
-│   ├── models/
-│   │   ├── model_phase1_best.keras
-│   │   ├── model_phase2_best.keras
-│   │   └── attention_model.keras
-│   │
-│   └── reports/
-│       └── classification_report.txt
+├── 📓 RESEARCH & NOTEBOOKS
+│   └── notebooks/
+│       ├── v8_chay.ipynb            # Main training notebook
+│       ├── eval_only.ipynb          # Model evaluation
+│       └── v8_chay_backup.ipynb     # Training backup
 │
-├── 📁 RUNTIME DIRECTORIES
-│   ├── uploads/                     # Thư mục lưu video upload (tạm thời)
-│   └── outputs/                     # Thư mục lưu segment video (tạm thời)
+├── 📈 RESULTS & DATA
+│   ├── charts/                      # Training & XAI visualizations
+│   ├── reports/                     # Metrics & classification reports
+│   ├── data/
+│   │   └── sample_videos/           # Test videos for demo
+│   ├── uploads/                     # Temporary upload storage
+│   └── outputs/                     # Generated segment videos
 │
 ├── 📝 DOCUMENTATION
-│   ├── README.md                    # File này
-│   ├── CODE_REVIEW.md               # Đánh giá chất lượng code
-│   ├── PROJECT_STATUS.md            # Trạng thái dự án
-│   └── requirements.txt             # Phụ thuộc Python (optional)
+│   ├── README.md                    # Project landing page
+│   └── docs/
+│       ├── CODE_REVIEW.md           # Code quality report
+│       ├── PROJECT_STATUS.md        # Roadmap & progress
+│       └── slides_outline_vn.md     # Presentation outline
 │
 └── ⚙️ CONFIGURATION
     ├── .gitignore
-    ├── .git/
-    └── .venv/                       # Virtual environment (nếu có)
+    ├── requirements.txt             # Dependencies
+    └── .venv/                       # Virtual environment
 ```
 
 ### 📂 Thư Mục Quan Trọng
@@ -513,9 +506,9 @@ batch_size = 1  # Từ 8 xuống 1
 
 | Tài Liệu | Mô Tả | Kích Thước |
 |----------|-------|-----------|
-| [CODE_REVIEW.md](./CODE_REVIEW.md) | Đánh giá code + best practices | 15+ pages |
-| [PROJECT_STATUS.md](./PROJECT_STATUS.md) | Status & roadmap | 12+ pages |
-| [v8_chay.ipynb](./v8_chay.ipynb) | Training notebook | ~50MB |
+| [CODE_REVIEW.md](./docs/CODE_REVIEW.md) | Đánh giá code + best practices | 15+ pages |
+| [PROJECT_STATUS.md](./docs/PROJECT_STATUS.md) | Status & roadmap | 12+ pages |
+| [v8_chay.ipynb](./notebooks/v8_chay.ipynb) | Training notebook | ~50MB |
 | [requirements.txt](./requirements.txt) | Dependencies | 20 lines |
 
 ---
