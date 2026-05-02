@@ -1,8 +1,11 @@
 import os
 import cv2
+import json
 import numpy as np
 import zipfile
 import tempfile
+import threading
+from datetime import datetime
 import tensorflow as tf
 from flask import Flask, render_template, request, jsonify, send_file
 from tensorflow.keras.layers import Layer, Input, GlobalAveragePooling2D, Bidirectional, LSTM, Dense, Dropout
@@ -29,6 +32,71 @@ SEGMENT_POST_SECONDS = 0.0
 
 # Lưu trữ dữ liệu nhận diện tạm thời
 detection_cache = {}
+
+# ─── Event Logging System (Heatmap & Analytics) ───────────────────────
+EVENTS_FILE = os.path.join('data', 'events.json')
+os.makedirs('data', exist_ok=True)
+_events_lock = threading.Lock()
+
+
+def _load_events():
+    """Đọc danh sách sự kiện từ file JSON."""
+    if not os.path.exists(EVENTS_FILE):
+        return []
+    try:
+        with open(EVENTS_FILE, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except (json.JSONDecodeError, IOError):
+        return []
+
+
+def _save_events(events):
+    """Ghi danh sách sự kiện ra file JSON."""
+    with open(EVENTS_FILE, 'w', encoding='utf-8') as f:
+        json.dump(events, f, ensure_ascii=False, indent=2)
+
+
+def log_violence_event(camera_id, confidence, violence_percentage=0,
+                       location='Không xác định'):
+    """Ghi nhận một sự kiện bạo lực vào log."""
+    event = {
+        'id': f"evt_{int(np.random.random() * 1e8)}",
+        'camera_id': camera_id,
+        'timestamp': datetime.now().isoformat(),
+        'confidence': round(confidence, 4),
+        'violence_percentage': round(violence_percentage, 2),
+        'location': location,
+    }
+    with _events_lock:
+        events = _load_events()
+        events.append(event)
+        # Giữ tối đa 5000 sự kiện gần nhất
+        if len(events) > 5000:
+            events = events[-5000:]
+        _save_events(events)
+    print(f"[EVENT] Logged violence from {camera_id}: {confidence:.1%}")
+    return event
+
+
+# ─── Face Detection cho Privacy Masking ───────────────────────────────
+_cascade_path = cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
+face_cascade = cv2.CascadeClassifier(_cascade_path)
+print(f"[*] Loaded face cascade from {_cascade_path}")
+
+
+def blur_faces_in_frame(frame, scale_factor=1.15, min_neighbors=5,
+                        blur_strength=99):
+    """Phát hiện và làm mờ tất cả khuôn mặt trong một frame."""
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    faces = face_cascade.detectMultiScale(
+        gray, scaleFactor=scale_factor, minNeighbors=min_neighbors,
+        minSize=(30, 30)
+    )
+    for (x, y, w, h) in faces:
+        roi = frame[y:y+h, x:x+w]
+        blurred = cv2.GaussianBlur(roi, (blur_strength, blur_strength), 30)
+        frame[y:y+h, x:x+w] = blurred
+    return frame, len(faces)
 
 
 @tf.keras.utils.register_keras_serializable()
@@ -379,6 +447,71 @@ def index():
 def realtime():
     return render_template('realtime.html')
 
+@app.route('/dashboard')
+def dashboard():
+    return render_template('dashboard.html')
+
+
+# ─── Events API (Heatmap & Analytics) ─────────────────────────────────
+@app.route('/api/events', methods=['GET'])
+def get_events():
+    """Trả về danh sách sự kiện bạo lực (filter theo camera, ngày)."""
+    camera_id = request.args.get('camera_id')
+    date_str = request.args.get('date')  # YYYY-MM-DD
+    limit = int(request.args.get('limit', 200))
+
+    events = _load_events()
+
+    if camera_id:
+        events = [e for e in events if e['camera_id'] == camera_id]
+    if date_str:
+        events = [e for e in events if e['timestamp'].startswith(date_str)]
+
+    events = events[-limit:]  # Lấy N sự kiện gần nhất
+    return jsonify({'status': 'success', 'events': events, 'total': len(events)})
+
+
+@app.route('/api/events/stats', methods=['GET'])
+def get_event_stats():
+    """Trả về thống kê tổng hợp cho dashboard."""
+    events = _load_events()
+    if not events:
+        return jsonify({
+            'total_events': 0, 'cameras': {},
+            'hourly': [0]*24, 'avg_confidence': 0,
+            'recent': []
+        })
+
+    # Thống kê theo camera
+    cameras = {}
+    hourly = [0] * 24
+    confidences = []
+    for e in events:
+        cam = e.get('camera_id', 'unknown')
+        cameras[cam] = cameras.get(cam, 0) + 1
+        try:
+            hour = int(e['timestamp'][11:13])
+            hourly[hour] += 1
+        except (ValueError, IndexError):
+            pass
+        confidences.append(e.get('confidence', 0))
+
+    return jsonify({
+        'total_events': len(events),
+        'cameras': cameras,
+        'hourly': hourly,
+        'avg_confidence': round(sum(confidences) / len(confidences), 4) if confidences else 0,
+        'recent': events[-20:][::-1]  # 20 sự kiện gần nhất, mới nhất trước
+    })
+
+
+@app.route('/api/events/clear', methods=['POST'])
+def clear_events():
+    """Xóa toàn bộ lịch sử sự kiện."""
+    with _events_lock:
+        _save_events([])
+    return jsonify({'status': 'success', 'message': 'Đã xóa lịch sử'})
+
 @app.route('/predict', methods=['POST'])
 def predict():
     if 'video' not in request.files:
@@ -441,6 +574,14 @@ def predict():
                 result['total_frames'] = int(total_frames)
                 result['violence_frames'] = int(np.sum(violence_binary))
                 result['violence_percentage'] = float((np.sum(violence_binary) / total_frames * 100) if total_frames > 0 else 0)
+                
+                # Tự động ghi event vào hệ thống analytics
+                log_violence_event(
+                    camera_id=request.form.get('camera_id', 'upload'),
+                    confidence=violence_prob,
+                    violence_percentage=result['violence_percentage'],
+                    location=request.form.get('location', 'Upload')
+                )
         else:
             # Không phát hiện bạo lực, xóa file
             os.remove(video_path)
@@ -455,6 +596,7 @@ def create_segment():
     try:
         data = request.get_json()
         session_id = data.get('session_id')
+        privacy_mode = data.get('privacy_mode', False)
         
         if not session_id or session_id not in detection_cache:
             return jsonify({'error': 'Session không tồn tại hoặc hết hạn'}), 400
@@ -487,13 +629,47 @@ def create_segment():
                 total_written_frames += int(cap_check.get(cv2.CAP_PROP_FRAME_COUNT))
                 cap_check.release()
         
+        # Privacy Masking: làm mờ khuôn mặt nếu bật
+        total_faces_blurred = 0
+        if privacy_mode and output_files:
+            print(f"[PRIVACY] Applying face blur to {len(output_files)} segment(s)...")
+            for output_filename in output_files:
+                output_path = os.path.join(app.config['OUTPUT_FOLDER'], output_filename)
+                if not os.path.exists(output_path):
+                    continue
+                # Đọc video, blur mặt, ghi lại
+                cap_p = cv2.VideoCapture(output_path)
+                temp_path = output_path + '.tmp.mp4'
+                fourcc_p = cv2.VideoWriter_fourcc(*'avc1')
+                out_p = cv2.VideoWriter(temp_path, fourcc_p, fps, (width, height))
+                if not out_p.isOpened():
+                    out_p.release()
+                    fourcc_p = cv2.VideoWriter_fourcc(*'mp4v')
+                    out_p = cv2.VideoWriter(temp_path, fourcc_p, fps, (width, height))
+                
+                while True:
+                    ret_p, frame_p = cap_p.read()
+                    if not ret_p:
+                        break
+                    frame_p, n_faces = blur_faces_in_frame(frame_p)
+                    total_faces_blurred += n_faces
+                    out_p.write(frame_p)
+                
+                cap_p.release()
+                out_p.release()
+                # Thay file gốc bằng file đã blur
+                os.replace(temp_path, output_path)
+            print(f"[PRIVACY] Done. Blurred {total_faces_blurred} face instances.")
+        
         result = {
             'status': 'success',
             'violence_segment_video': f'/download/{output_files[0]}' if output_files else None,
             'violence_segment_videos': [f'/download/{filename}' for filename in output_files],
             'violence_frames': int(total_written_frames),
             'total_frames': int(total_frames),
-            'violence_percentage': float((total_written_frames / total_frames * 100) if total_frames > 0 else 0)
+            'violence_percentage': float((total_written_frames / total_frames * 100) if total_frames > 0 else 0),
+            'privacy_mode': privacy_mode,
+            'faces_blurred': total_faces_blurred
         }
         
         # Xóa file input sau khi tạo video

@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Analytics | Violence Detection CCTV</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            --bg: #0a0e1a;
+            --surface: rgba(22, 28, 45, 0.85);
+            --surface-alt: rgba(30, 38, 60, 0.7);
+            --accent: #818cf8;
+            --accent-glow: rgba(129, 140, 248, 0.2);
+            --danger: #f43f5e;
+            --danger-glow: rgba(244, 63, 94, 0.15);
+            --success: #34d399;
+            --warning: #fbbf24;
+            --text: #f1f5f9;
+            --muted: #64748b;
+            --border: rgba(255,255,255,0.08);
+        }
+        * { margin:0; padding:0; box-sizing:border-box; font-family:'Inter',sans-serif; }
+        body {
+            background: var(--bg);
+            background-image:
+                radial-gradient(ellipse at 20% 0%, rgba(129,140,248,0.08), transparent 50%),
+                radial-gradient(ellipse at 80% 100%, rgba(244,63,94,0.06), transparent 50%);
+            color: var(--text);
+            min-height: 100vh;
+        }
+
+        /* ── Header ───────────────────────────── */
+        header {
+            padding: 1.25rem 2rem;
+            display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 1px solid var(--border);
+            backdrop-filter: blur(12px);
+            position: sticky; top: 0; z-index: 50;
+            background: rgba(10,14,26,0.7);
+        }
+        .logo { font-weight: 800; font-size: 1.15rem; display:flex; align-items:center; gap:.5rem; }
+        .logo span { background: linear-gradient(135deg,#818cf8,#f472b6); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+        nav { display:flex; gap:.75rem; }
+        nav a {
+            text-decoration:none; font-size:.8rem; font-weight:600; padding:.45rem .9rem;
+            border-radius:9999px; border:1px solid var(--border); color:var(--muted);
+            transition: all .2s;
+        }
+        nav a:hover { border-color:var(--accent); color:var(--accent); }
+        nav a.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+
+        /* ── Main Grid ────────────────────────── */
+        .dashboard { padding: 2rem; max-width: 1400px; margin: 0 auto; }
+        .page-title {
+            font-size: 1.75rem; font-weight: 800; margin-bottom: .25rem;
+        }
+        .page-subtitle { color: var(--muted); font-size: .95rem; margin-bottom: 2rem; }
+
+        /* ── Stat Cards ───────────────────────── */
+        .stats-row {
+            display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.25rem;
+            margin-bottom: 2rem;
+        }
+        @media(max-width:900px) { .stats-row { grid-template-columns: repeat(2,1fr); } }
+        @media(max-width:500px) { .stats-row { grid-template-columns: 1fr; } }
+        .stat-card {
+            background: var(--surface); border: 1px solid var(--border); border-radius: 1rem;
+            padding: 1.5rem; backdrop-filter: blur(10px);
+            transition: transform .2s, box-shadow .2s;
+        }
+        .stat-card:hover { transform: translateY(-3px); box-shadow: 0 12px 30px rgba(0,0,0,.3); }
+        .stat-card .label { font-size:.75rem; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); font-weight:600; display:flex; align-items:center; gap:.4rem; margin-bottom:.6rem; }
+        .stat-card .value { font-size:2rem; font-weight:800; }
+        .stat-card .sub { font-size:.75rem; color:var(--muted); margin-top:.25rem; }
+
+        .val-danger { color: var(--danger); }
+        .val-accent { color: var(--accent); }
+        .val-success { color: var(--success); }
+        .val-warning { color: var(--warning); }
+
+        /* ── Charts Row ───────────────────────── */
+        .charts-row {
+            display: grid; grid-template-columns: 2fr 1fr; gap: 1.25rem;
+            margin-bottom: 2rem;
+        }
+        @media(max-width:900px) { .charts-row { grid-template-columns: 1fr; } }
+        .panel {
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: 1rem; padding: 1.5rem; backdrop-filter: blur(10px);
+        }
+        .panel-title { font-size:.85rem; font-weight:700; margin-bottom:1rem; display:flex; align-items:center; gap:.5rem; }
+
+        /* ── Hourly Heatmap ────────────────────── */
+        .hourly-chart { display: flex; align-items: flex-end; gap: 4px; height: 180px; padding-top: 1rem; }
+        .bar-wrap { flex:1; display:flex; flex-direction:column; align-items:center; gap:4px; height:100%; justify-content:flex-end; }
+        .bar {
+            width: 100%; min-height: 4px; border-radius: 4px 4px 0 0;
+            transition: height .6s cubic-bezier(.34,1.56,.64,1), background .3s;
+            cursor: pointer; position: relative;
+        }
+        .bar:hover { filter: brightness(1.3); }
+        .bar-label { font-size:.55rem; color:var(--muted); font-family:'JetBrains Mono',monospace; }
+        .bar-tooltip {
+            position:absolute; bottom:calc(100% + 6px); left:50%; transform:translateX(-50%);
+            background:#1e1e2e; color:#fff; font-size:.65rem; padding:3px 7px; border-radius:4px;
+            white-space:nowrap; opacity:0; pointer-events:none; transition:opacity .2s;
+            font-family:'JetBrains Mono',monospace;
+        }
+        .bar:hover .bar-tooltip { opacity:1; }
+
+        /* ── Camera Breakdown ─────────────────── */
+        .camera-list { display:flex; flex-direction:column; gap:.6rem; max-height:220px; overflow-y:auto; }
+        .camera-item {
+            display:flex; align-items:center; gap:.75rem; padding:.6rem .75rem;
+            background:var(--surface-alt); border-radius:.6rem; border:1px solid var(--border);
+        }
+        .camera-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+        .camera-name { flex:1; font-size:.85rem; font-weight:600; }
+        .camera-count { font-family:'JetBrains Mono',monospace; font-size:.85rem; font-weight:700; color:var(--danger); }
+        .camera-bar-bg { flex:2; height:6px; background:rgba(255,255,255,.05); border-radius:3px; overflow:hidden; }
+        .camera-bar-fill { height:100%; border-radius:3px; transition: width .6s ease; }
+
+        /* ── Event Log ─────────────────────────── */
+        .event-table-wrap { overflow-x:auto; max-height:350px; overflow-y:auto; }
+        table { width:100%; border-collapse:collapse; font-size:.8rem; }
+        th { text-align:left; padding:.6rem .75rem; color:var(--muted); font-weight:600; text-transform:uppercase; font-size:.7rem; letter-spacing:.05em; border-bottom:1px solid var(--border); position:sticky; top:0; background:var(--surface); z-index:1; }
+        td { padding:.55rem .75rem; border-bottom:1px solid var(--border); }
+        tr:hover td { background:rgba(129,140,248,.04); }
+        .badge { display:inline-block; padding:2px 8px; border-radius:9999px; font-size:.65rem; font-weight:700; }
+        .badge-danger { background:var(--danger-glow); color:var(--danger); }
+        .badge-high { background:rgba(251,191,36,.12); color:var(--warning); }
+
+        /* ── Buttons ──────────────────────────── */
+        .btn-sm {
+            padding:.4rem .9rem; border-radius:.5rem; border:1px solid var(--border);
+            background:var(--surface-alt); color:var(--text); font-size:.75rem; font-weight:600;
+            cursor:pointer; transition:all .2s; display:inline-flex; align-items:center; gap:.35rem;
+        }
+        .btn-sm:hover { border-color:var(--accent); color:var(--accent); }
+        .btn-danger { border-color:rgba(244,63,94,.3); }
+        .btn-danger:hover { border-color:var(--danger); color:var(--danger); }
+
+        /* ── Empty State ──────────────────────── */
+        .empty-state {
+            text-align:center; padding:3rem 1rem; color:var(--muted);
+        }
+        .empty-state i { opacity:.3; margin-bottom:1rem; }
+
+        .refresh-anim { animation: spin .6s ease; }
+        @keyframes spin { from{transform:rotate(0)} to{transform:rotate(360deg)} }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="logo"><i data-lucide="bar-chart-3" style="width:20px;height:20px;color:var(--accent)"></i> <span>Violence Analytics</span></div>
+    <nav>
+        <a href="/">Phân tích Video</a>
+        <a href="/realtime">Real-time</a>
+        <a href="/dashboard" class="active">Dashboard</a>
+    </nav>
+</header>
+
+<div class="dashboard">
+    <h1 class="page-title">📊 Bản đồ nhiệt & Phân tích</h1>
+    <p class="page-subtitle">Thống kê sự kiện bạo lực được phát hiện theo thời gian và nguồn camera</p>
+
+    <!-- Stat Cards -->
+    <div class="stats-row">
+        <div class="stat-card">
+            <div class="label"><i data-lucide="alert-triangle" style="width:14px;height:14px;color:var(--danger)"></i> Tổng sự kiện</div>
+            <div class="value val-danger" id="s-total">—</div>
+            <div class="sub">Tổng số lần phát hiện bạo lực</div>
+        </div>
+        <div class="stat-card">
+            <div class="label"><i data-lucide="camera" style="width:14px;height:14px;color:var(--accent)"></i> Số camera</div>
+            <div class="value val-accent" id="s-cameras">—</div>
+            <div class="sub">Nguồn camera ghi nhận</div>
+        </div>
+        <div class="stat-card">
+            <div class="label"><i data-lucide="target" style="width:14px;height:14px;color:var(--warning)"></i> Độ tin cậy TB</div>
+            <div class="value val-warning" id="s-conf">—</div>
+            <div class="sub">Trung bình confidence</div>
+        </div>
+        <div class="stat-card">
+            <div class="label"><i data-lucide="clock" style="width:14px;height:14px;color:var(--success)"></i> Giờ cao điểm</div>
+            <div class="value val-success" id="s-peak">—</div>
+            <div class="sub">Khung giờ nhiều sự kiện nhất</div>
+        </div>
+    </div>
+
+    <!-- Charts -->
+    <div class="charts-row">
+        <div class="panel">
+            <div class="panel-title"><i data-lucide="flame" style="width:16px;height:16px;color:var(--danger)"></i> Bản đồ nhiệt theo giờ (24h)</div>
+            <div class="hourly-chart" id="hourly-chart"></div>
+        </div>
+        <div class="panel">
+            <div class="panel-title"><i data-lucide="video" style="width:16px;height:16px;color:var(--accent)"></i> Phân bổ theo Camera</div>
+            <div class="camera-list" id="camera-list">
+                <div class="empty-state"><p>Chưa có dữ liệu</p></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Event Log -->
+    <div class="panel">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+            <div class="panel-title" style="margin-bottom:0"><i data-lucide="scroll-text" style="width:16px;height:16px;color:var(--accent)"></i> Nhật ký sự kiện</div>
+            <div style="display:flex;gap:.5rem;">
+                <button class="btn-sm" id="refresh-btn" onclick="loadData()">
+                    <i data-lucide="refresh-cw" style="width:12px;height:12px"></i> Làm mới
+                </button>
+                <button class="btn-sm btn-danger" onclick="clearEvents()">
+                    <i data-lucide="trash-2" style="width:12px;height:12px"></i> Xóa lịch sử
+                </button>
+            </div>
+        </div>
+        <div class="event-table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Thời gian</th>
+                        <th>Camera</th>
+                        <th>Vị trí</th>
+                        <th>Confidence</th>
+                        <th>% Bạo lực</th>
+                        <th>Mức độ</th>
+                    </tr>
+                </thead>
+                <tbody id="event-tbody">
+                    <tr><td colspan="6" class="empty-state">Đang tải...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    lucide.createIcons();
+
+    const COLORS = ['#f43f5e','#818cf8','#34d399','#fbbf24','#f97316','#a78bfa','#fb7185','#38bdf8','#4ade80','#facc15'];
+
+    async function loadData() {
+        // Animate refresh button
+        const btn = document.getElementById('refresh-btn');
+        const icon = btn.querySelector('i');
+        if (icon) icon.classList.add('refresh-anim');
+        setTimeout(() => icon && icon.classList.remove('refresh-anim'), 600);
+
+        try {
+            const res = await fetch('/api/events/stats');
+            const data = await res.json();
+            renderStats(data);
+            renderHourlyChart(data.hourly || []);
+            renderCameras(data.cameras || {});
+            renderEventLog(data.recent || []);
+        } catch(e) {
+            console.error('Failed to load data:', e);
+        }
+    }
+
+    function renderStats(data) {
+        document.getElementById('s-total').textContent = data.total_events || 0;
+        const camCount = Object.keys(data.cameras || {}).length;
+        document.getElementById('s-cameras').textContent = camCount;
+        document.getElementById('s-conf').textContent = data.avg_confidence
+            ? (data.avg_confidence * 100).toFixed(1) + '%' : '—';
+
+        const hourly = data.hourly || [];
+        const maxVal = Math.max(...hourly);
+        if (maxVal > 0) {
+            const peakHour = hourly.indexOf(maxVal);
+            document.getElementById('s-peak').textContent = `${String(peakHour).padStart(2,'0')}:00`;
+        } else {
+            document.getElementById('s-peak').textContent = '—';
+        }
+    }
+
+    function renderHourlyChart(hourly) {
+        const container = document.getElementById('hourly-chart');
+        container.innerHTML = '';
+        const maxVal = Math.max(...hourly, 1);
+
+        for (let h = 0; h < 24; h++) {
+            const count = hourly[h] || 0;
+            const pct = (count / maxVal) * 100;
+            // Color intensity based on count
+            const intensity = count / maxVal;
+            let bg;
+            if (intensity === 0) bg = 'rgba(255,255,255,0.04)';
+            else if (intensity < 0.3) bg = 'rgba(129,140,248,0.5)';
+            else if (intensity < 0.6) bg = 'rgba(251,191,36,0.6)';
+            else bg = 'rgba(244,63,94,0.75)';
+
+            const wrap = document.createElement('div');
+            wrap.className = 'bar-wrap';
+            wrap.innerHTML = `
+                <div class="bar" style="height:${Math.max(pct, 3)}%;background:${bg}">
+                    <div class="bar-tooltip">${String(h).padStart(2,'0')}:00 — ${count} sự kiện</div>
+                </div>
+                <span class="bar-label">${String(h).padStart(2,'0')}</span>
+            `;
+            container.appendChild(wrap);
+        }
+    }
+
+    function renderCameras(cameras) {
+        const container = document.getElementById('camera-list');
+        const entries = Object.entries(cameras).sort((a,b) => b[1] - a[1]);
+        if (entries.length === 0) {
+            container.innerHTML = '<div class="empty-state"><p>Chưa có dữ liệu camera</p></div>';
+            return;
+        }
+        const maxCount = entries[0][1];
+        container.innerHTML = entries.map(([cam, count], i) => {
+            const color = COLORS[i % COLORS.length];
+            const pct = (count / maxCount) * 100;
+            return `
+                <div class="camera-item">
+                    <div class="camera-dot" style="background:${color}"></div>
+                    <div class="camera-name">${cam}</div>
+                    <div class="camera-bar-bg"><div class="camera-bar-fill" style="width:${pct}%;background:${color}"></div></div>
+                    <div class="camera-count">${count}</div>
+                </div>`;
+        }).join('');
+    }
+
+    function renderEventLog(events) {
+        const tbody = document.getElementById('event-tbody');
+        if (!events.length) {
+            tbody.innerHTML = '<tr><td colspan="6" class="empty-state">Chưa có sự kiện nào được ghi nhận. Hãy phân tích video để bắt đầu.</td></tr>';
+            return;
+        }
+        tbody.innerHTML = events.map(e => {
+            const dt = new Date(e.timestamp);
+            const timeStr = dt.toLocaleString('vi-VN');
+            const conf = (e.confidence * 100).toFixed(1);
+            const severity = e.confidence >= 0.7 ? 'danger' : 'high';
+            const severityLabel = e.confidence >= 0.7 ? '⚠️ Cao' : '⚡ Trung bình';
+            return `<tr>
+                <td style="font-family:'JetBrains Mono',monospace;font-size:.75rem;">${timeStr}</td>
+                <td><strong>${e.camera_id}</strong></td>
+                <td>${e.location || '—'}</td>
+                <td style="font-weight:700;color:var(--danger)">${conf}%</td>
+                <td>${(e.violence_percentage || 0).toFixed(1)}%</td>
+                <td><span class="badge badge-${severity}">${severityLabel}</span></td>
+            </tr>`;
+        }).join('');
+    }
+
+    async function clearEvents() {
+        if (!confirm('Bạn có chắc muốn xóa toàn bộ lịch sử sự kiện?')) return;
+        try {
+            await fetch('/api/events/clear', { method: 'POST' });
+            loadData();
+        } catch(e) { alert('Lỗi khi xóa dữ liệu'); }
+    }
+
+    // Auto-refresh every 30s
+    loadData();
+    setInterval(loadData, 30000);
+</script>
+</body>
+</html>
