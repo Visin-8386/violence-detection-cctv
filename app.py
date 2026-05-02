@@ -740,6 +740,20 @@ def predict_realtime():
         class_idx = np.argmax(prediction[0])
         confidence = float(prediction[0][class_idx])
         
+        # Log event nếu phát hiện bạo lực (cooldown 10s tránh spam)
+        if class_idx == 1:
+            camera_id = data.get('camera_id', 'webcam')
+            now = datetime.now()
+            last_key = f"_rt_last_{camera_id}"
+            last_time = getattr(predict_realtime, last_key, None)
+            if last_time is None or (now - last_time).total_seconds() >= 10:
+                setattr(predict_realtime, last_key, now)
+                log_violence_event(
+                    camera_id=camera_id,
+                    confidence=confidence,
+                    location='Realtime Camera'
+                )
+        
         return jsonify({
             'class': CLASSES[class_idx],
             'confidence': confidence,

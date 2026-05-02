@@ -221,6 +221,16 @@
         }
 
         canvas { display: none; }
+
+        /* Mini Heatmap */
+        .mini-heatmap { display:flex; align-items:flex-end; gap:2px; height:60px; }
+        .mini-bar { flex:1; min-height:2px; border-radius:2px 2px 0 0; transition: height .5s ease, background .3s; }
+        .mini-labels { display:flex; justify-content:space-between; margin-top:3px; }
+        .mini-labels span { font-size:.5rem; color:var(--muted); font-family:'JetBrains Mono',monospace; }
+        .heatmap-stats { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:8px; }
+        .hs-item { background:rgba(255,255,255,.03); padding:6px 8px; border-radius:4px; text-align:center; }
+        .hs-val { font-size:1rem; font-weight:700; font-family:'JetBrains Mono',monospace; }
+        .hs-lbl { font-size:.55rem; color:var(--muted); text-transform:uppercase; margin-top:2px; }
     </style>
 </head>
 <body>
@@ -276,6 +286,23 @@
                 <div class="card-title"><i data-lucide="terminal"></i> NHẬT KÝ HỆ THỐNG</div>
                 <div id="log-container">
                     <div class="log-entry">> Hệ thống đã khởi động...</div>
+                </div>
+            </div>
+
+            <!-- Mini Heatmap -->
+            <div class="card">
+                <div class="card-title"><i data-lucide="flame"></i> BẢN ĐỒ NHIỆT (24H)</div>
+                <div class="mini-heatmap" id="mini-heatmap"></div>
+                <div class="mini-labels"><span>00h</span><span>06h</span><span>12h</span><span>18h</span><span>23h</span></div>
+                <div class="heatmap-stats">
+                    <div class="hs-item">
+                        <div class="hs-val" id="hs-total" style="color:var(--danger)">0</div>
+                        <div class="hs-lbl">Tổng cảnh báo</div>
+                    </div>
+                    <div class="hs-item">
+                        <div class="hs-val" id="hs-peak" style="color:var(--accent)">—</div>
+                        <div class="hs-lbl">Giờ cao điểm</div>
+                    </div>
                 </div>
             </div>
 
@@ -389,6 +416,41 @@
                 // addLog("Hệ thống: Bình thường", "normal");
             }
         }
+
+        // ─── Mini Heatmap ────────────────────────────────
+        async function loadHeatmap() {
+            try {
+                const res = await fetch('/api/events/stats');
+                const data = await res.json();
+                const hourly = data.hourly || Array(24).fill(0);
+                const maxVal = Math.max(...hourly, 1);
+                const container = document.getElementById('mini-heatmap');
+                container.innerHTML = '';
+                for (let h = 0; h < 24; h++) {
+                    const count = hourly[h] || 0;
+                    const pct = (count / maxVal) * 100;
+                    const intensity = count / maxVal;
+                    let bg;
+                    if (intensity === 0) bg = 'rgba(255,255,255,0.04)';
+                    else if (intensity < 0.3) bg = 'rgba(0,255,65,0.4)';
+                    else if (intensity < 0.6) bg = 'rgba(251,191,36,0.6)';
+                    else bg = 'rgba(255,0,0,0.7)';
+                    const bar = document.createElement('div');
+                    bar.className = 'mini-bar';
+                    bar.style.height = Math.max(pct, 4) + '%';
+                    bar.style.background = bg;
+                    bar.title = `${String(h).padStart(2,'0')}:00 — ${count} sự kiện`;
+                    container.appendChild(bar);
+                }
+                document.getElementById('hs-total').textContent = data.total_events || 0;
+                if (maxVal > 0) {
+                    const peakH = hourly.indexOf(Math.max(...hourly));
+                    document.getElementById('hs-peak').textContent = String(peakH).padStart(2,'0') + ':00';
+                }
+            } catch(e) { console.error('Heatmap error:', e); }
+        }
+        loadHeatmap();
+        setInterval(loadHeatmap, 15000);
     </script>
 </body>
 </html>
