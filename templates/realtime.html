@@ -341,6 +341,7 @@
         let activeChunks = [];
         let isRecordingSegment = false;
         let stopRecordingTimeout = null;
+        let currentEventId = null;
 
         // Bật camera
         startBtn.addEventListener('click', async () => {
@@ -435,6 +436,10 @@
         }
 
         function updateUI(data) {
+            if (data.event_id) {
+                currentEventId = data.event_id;
+            }
+
             if (data.class === 'Violence') {
                 statusBox.textContent = "PHÁT HIỆN BẠO LỰC!";
                 statusBox.className = "status-box status-danger";
@@ -467,26 +472,35 @@
             }
         }
 
-        function stopAndSaveRecording() {
+        async function stopAndSaveRecording() {
             isRecordingSegment = false;
             stopRecordingTimeout = null;
-            if (activeChunks.length > 0) {
+            if (activeChunks.length > 0 && currentEventId) {
                 const blob = new Blob(activeChunks, { type: 'video/webm' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.style.display = 'none';
-                a.href = url;
-                a.download = `cctv_violence_incident_${new Date().getTime()}.webm`;
-                document.body.appendChild(a);
-                a.click();
-                setTimeout(() => {
-                    document.body.removeChild(a);
-                    window.URL.revokeObjectURL(url);
-                }, 100);
-                addLog("Đã xuất video sự kiện bạo lực (tải xuống).", "normal");
+                
+                const formData = new FormData();
+                formData.append('video', blob, 'video.webm');
+                formData.append('event_id', currentEventId);
+
+                try {
+                    addLog("Đang lưu video sự cố lên máy chủ...", "normal");
+                    const res = await fetch('/api/events/upload_video', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    if (res.ok) {
+                        addLog("Đã lưu video trên Dashboard thành công.", "normal");
+                    } else {
+                        addLog("Lỗi khi lưu video.", "danger");
+                    }
+                } catch (e) {
+                    console.error("Upload error", e);
+                    addLog("Lỗi kết nối khi lưu video.", "danger");
+                }
             }
             activeChunks = [];
             preBuffer = []; // Reset buffer
+            currentEventId = null;
         }
 
         // ─── Mini Heatmap ────────────────────────────────

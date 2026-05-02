@@ -512,6 +512,32 @@ def clear_events():
         _save_events([])
     return jsonify({'status': 'success', 'message': 'Đã xóa lịch sử'})
 
+@app.route('/api/events/upload_video', methods=['POST'])
+def upload_event_video():
+    """Nhận video do client tự quay và gán vào sự kiện."""
+    if 'video' not in request.files:
+        return jsonify({'error': 'No video part'}), 400
+    file = request.files['video']
+    event_id = request.form.get('event_id')
+    
+    if file.filename == '' or not event_id:
+        return jsonify({'error': 'Missing file or event_id'}), 400
+        
+    filename = f"cctv_violence_{event_id}.webm"
+    filepath = os.path.join(app.config['OUTPUT_FOLDER'], filename)
+    file.save(filepath)
+    
+    # Cập nhật sự kiện trong json
+    with _events_lock:
+        events = _load_events()
+        for e in events:
+            if e['id'] == event_id:
+                e['video_file'] = filename
+                break
+        _save_events(events)
+        
+    return jsonify({'status': 'success', 'filename': filename})
+
 @app.route('/predict', methods=['POST'])
 def predict():
     if 'video' not in request.files:
@@ -741,6 +767,7 @@ def predict_realtime():
         confidence = float(prediction[0][class_idx])
         
         # Log event nếu phát hiện bạo lực (cooldown 10s tránh spam)
+        event_id = None
         if class_idx == 1:
             camera_id = data.get('camera_id', 'webcam')
             now = datetime.now()
@@ -748,16 +775,18 @@ def predict_realtime():
             last_time = getattr(predict_realtime, last_key, None)
             if last_time is None or (now - last_time).total_seconds() >= 10:
                 setattr(predict_realtime, last_key, now)
-                log_violence_event(
+                evt = log_violence_event(
                     camera_id=camera_id,
                     confidence=confidence,
                     violence_percentage=100.0,
                     location='Realtime Camera'
                 )
+                event_id = evt['id']
         
         return jsonify({
             'class': CLASSES[class_idx],
             'confidence': confidence,
+            'event_id': event_id,
             'status': 'success'
         })
         
